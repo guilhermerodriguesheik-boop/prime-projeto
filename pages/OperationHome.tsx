@@ -11,9 +11,14 @@ interface OperationHomeProps {
 }
 
 const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate, onLogout }) => {
-  const isAdminTotal = user.perfil === UserRole.ADMIN;
-  const isCustomAdmin = user.perfil === UserRole.CUSTOM_ADMIN;
+  // Normalizar perfil para evitar erros de maiúsculas/minúsculas do banco de dados
+  const perfilNormalizado = user.perfil?.toLowerCase() || '';
+  
+  const isAdminTotal = perfilNormalizado === UserRole.ADMIN;
+  const isCustomAdmin = perfilNormalizado === UserRole.CUSTOM_ADMIN;
   const isAnyAdmin = isAdminTotal || isCustomAdmin;
+  const isMotorista = perfilNormalizado === UserRole.MOTORISTA;
+  const isAjudante = perfilNormalizado === UserRole.AJUDANTE;
 
   const hasPermission = (pageId: string) => {
     if (isAdminTotal) return true;
@@ -41,7 +46,7 @@ const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate
             <span className="text-slate-400">Status: <span className="text-emerald-500 font-bold uppercase text-xs">Conectado</span></span>
             <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
             <span className="text-slate-400">Perfil: <span className="text-blue-400 font-bold uppercase tracking-wider text-xs">
-              {user.perfil === UserRole.CUSTOM_ADMIN ? 'Admin Personalizado' : user.perfil}
+              {perfilNormalizado}
             </span></span>
           </div>
         </div>
@@ -73,18 +78,26 @@ const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate
         </div>
       </Card>
 
+      {/* Mensagem caso não tenha placa selecionada */}
       {!session && !isAnyAdmin && (
         <div className="bg-slate-900/80 p-12 rounded-2xl text-center border-2 border-dashed border-slate-800">
           <div className="text-5xl mb-4">🚛</div>
           <h3 className="text-xl font-bold text-slate-200">Veículo não selecionado</h3>
-          <p className="text-slate-500 max-w-sm mx-auto mt-2">Como você é um usuário operacional, precisa selecionar um veículo para iniciar.</p>
+          <p className="text-slate-500 max-w-sm mx-auto mt-2">Você precisa selecionar um veículo para acessar as funções de {perfilNormalizado}.</p>
+          <button 
+            onClick={() => onNavigate('select-vehicle')}
+            className="mt-6 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold"
+          >
+            SELECIONAR AGORA
+          </button>
         </div>
       )}
 
+      {/* Grid de Botões (Apenas se tiver placa ou for Admin) */}
       {(session || isAnyAdmin) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Menu para Motoristas */}
-          {user.perfil === UserRole.MOTORISTA && (
+          {isMotorista && (
             <>
               <SectionHeader title="Minha Operação" />
               <BigButton onClick={() => onNavigate('daily-route')} icon="🛣️" variant="primary">Rota do Dia</BigButton>
@@ -96,7 +109,7 @@ const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate
           )}
 
           {/* Menu para Ajudantes */}
-          {user.perfil === UserRole.AJUDANTE && (
+          {isAjudante && (
             <>
               <SectionHeader title="Minha Operação" />
               <BigButton onClick={() => onNavigate('route')} icon="📦">Registrar Saída</BigButton>
@@ -105,52 +118,27 @@ const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate
             </>
           )}
 
-          {/* Menu Organizado para Administradores (Total ou Personalizado) */}
+          {/* Menu para Administradores */}
           {isAnyAdmin && (
             <>
-              {/* CATEGORIA 1: CONTROLE CRÍTICO */}
-              {(hasPermission('admin-pending') || hasPermission('admin-dashboard') || hasPermission('admin-checklists') || hasPermission('admin-tracking')) && (
-                <SectionHeader title="Controle &amp; Auditoria" />
-              )}
+              <SectionHeader title="Controle & Auditoria" />
               {hasPermission('admin-pending') && <BigButton onClick={() => onNavigate('admin-pending')} icon="🔔" variant="primary">Pendências</BigButton>}
               {hasPermission('admin-tracking') && <BigButton onClick={() => onNavigate('admin-tracking')} icon="📡" variant="primary">Rastreamento</BigButton>}
               {hasPermission('admin-dashboard') && <BigButton onClick={() => onNavigate('admin-dashboard')} icon="📊" variant="secondary">Dashboard Global</BigButton>}
               {hasPermission('admin-checklists') && <BigButton onClick={() => onNavigate('admin-checklists')} icon="📸" variant="primary">Checklist Inspeções</BigButton>}
-
-              {/* CATEGORIA 2: LANÇAMENTOS FINANCEIROS */}
-              {(hasPermission('admin-create-route') || hasPermission('admin-agregado-freight') || hasPermission('admin-tolls')) && (
-                <SectionHeader title="Operacional &amp; Lançamentos" />
-              )}
-              {hasPermission('admin-create-route') && <BigButton onClick={() => onNavigate('admin-create-route')} icon="➕" variant="primary">Lançar Rota (Manual)</BigButton>}
-              {hasPermission('admin-agregado-freight') && <BigButton onClick={() => onNavigate('admin-agregado-freight')} icon="🚛" variant="primary">Lançar Frete Agregado</BigButton>}
-              {hasPermission('admin-tolls') && <BigButton onClick={() => onNavigate('admin-tolls')} icon="🛣️" variant="primary">Gestão de Pedágios</BigButton>}
-
-              {/* CATEGORIA 3: RELATÓRIOS DE PERFORMANCE */}
-              {(hasPermission('admin-consolidated-finance') || hasPermission('admin-vehicle-report') || hasPermission('admin-agregado-report') || hasPermission('admin-activity-report') || hasPermission('admin-fixed-expenses')) && (
-                <SectionHeader title="Relatórios Financeiros" />
-              )}
-              {hasPermission('admin-consolidated-finance') && <BigButton onClick={() => onNavigate('admin-consolidated-finance')} icon="🏦" variant="success">Faturamento e Lucro Geral</BigButton>}
-              {hasPermission('admin-vehicle-report') && <BigButton onClick={() => onNavigate('admin-vehicle-report')} icon="📉" variant="secondary">Desempenho Frota</BigButton>}
-              {hasPermission('admin-agregado-report') && <BigButton onClick={() => onNavigate('admin-agregado-report')} icon="📈" variant="primary">Relatório Agregados</BigButton>}
-              {hasPermission('admin-activity-report') && <BigButton onClick={() => onNavigate('admin-activity-report')} icon="👤" variant="primary">Relatório por Usuário</BigButton>}
-              {hasPermission('admin-fixed-expenses') && <BigButton onClick={() => onNavigate('admin-fixed-expenses')} icon="💸" variant="primary">Despesas Fixas</BigButton>}
-
-              {/* CATEGORIA 4: MANUTENÇÃO E FROTA */}
-              {(hasPermission('admin-preventive') || hasPermission('admin-maintenance-history') || hasPermission('vehicle-mgmt')) && (
-                <SectionHeader title="Frota &amp; Manutenção" />
-              )}
-              {hasPermission('admin-preventive') && <BigButton onClick={() => onNavigate('admin-preventive')} icon="🛡️" variant="success">Preventiva Frota</BigButton>}
-              {hasPermission('admin-maintenance-history') && <BigButton onClick={() => onNavigate('admin-maintenance-history')} icon="📜" variant="secondary">Histórico Manutenção</BigButton>}
-              {hasPermission('vehicle-mgmt') && <BigButton onClick={() => onNavigate('vehicle-mgmt')} icon="🚛" variant="secondary">Todas as Placas</BigButton>}
-
-              {/* CATEGORIA 5: CONFIGURAÇÕES E CADASTROS */}
-              {(hasPermission('admin-agregado-mgmt') || hasPermission('admin-customers') || hasPermission('user-mgmt')) && (
-                <SectionHeader title="Cadastros &amp; Equipe" />
-              )}
-              {hasPermission('admin-agregado-mgmt') && <BigButton onClick={() => onNavigate('admin-agregado-mgmt')} icon="🤝" variant="primary">Cadastrar Agregado</BigButton>}
-              {hasPermission('admin-customers') && <BigButton onClick={() => onNavigate('admin-customers')} icon="🏢" variant="primary">Gestão de Clientes</BigButton>}
-              {hasPermission('user-mgmt') && <BigButton onClick={() => onNavigate('user-mgmt')} icon="👥" variant="secondary">Gestão de Equipe</BigButton>}
+              
+              <SectionHeader title="Operacional & Financeiro" />
+              {hasPermission('admin-consolidated-finance') && <BigButton onClick={() => onNavigate('admin-consolidated-finance')} icon="🏦" variant="success">Lucro Geral</BigButton>}
+              {hasPermission('user-mgmt') && <BigButton onClick={() => onNavigate('user-mgmt')} icon="👥" variant="secondary">Equipe</BigButton>}
+              {hasPermission('vehicle-mgmt') && <BigButton onClick={() => onNavigate('vehicle-mgmt')} icon="🚛" variant="secondary">Veículos</BigButton>}
             </>
+          )}
+          
+          {/* Fallback caso o perfil não seja reconhecido */}
+          {!isMotorista && !isAjudante && !isAnyAdmin && (
+            <div className="col-span-full p-8 text-center text-slate-500">
+              Perfil "{user.perfil}" sem permissões configuradas. Contate o administrador.
+            </div>
           )}
         </div>
       )}
