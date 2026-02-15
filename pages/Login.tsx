@@ -87,14 +87,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
       </Card>
       
       <div className="mt-8 text-center space-y-4">
-        <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Credenciais de Teste</p>
-          <div className="flex flex-col gap-1">
-             <div className="text-xs text-slate-400">Admin: <span className="text-white font-mono">Guilherme</span> / <span className="text-white font-mono">prime123</span></div>
-             <div className="text-xs text-slate-400">Motorista: <span className="text-white font-mono">João Pinheiro</span> / <span className="text-white font-mono">123</span></div>
-          </div>
-        </div>
-        
         <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
           Acesso restrito a colaboradores autorizados
         </p>
