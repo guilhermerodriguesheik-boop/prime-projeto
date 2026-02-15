@@ -39,10 +39,33 @@ const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('login');
   
-  // Estado com persistência (tentar carregar do localStorage ou usar iniciais)
-  const [users, setUsers] = useState<User[]>(() => JSON.parse(localStorage.getItem('prime_users') || JSON.stringify(INITIAL_USERS)));
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => JSON.parse(localStorage.getItem('prime_vehicles') || JSON.stringify(INITIAL_VEHICLES)));
-  const [customers, setCustomers] = useState<Customer[]>(() => JSON.parse(localStorage.getItem('prime_customers') || JSON.stringify(INITIAL_CUSTOMERS)));
+  // Inicialização robusta: Só usa o localStorage se ele contiver dados válidos. 
+  // Caso contrário, força o uso dos INITIAL_X.
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem('prime_users');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.length > 0 ? parsed : INITIAL_USERS;
+    } catch { return INITIAL_USERS; }
+  });
+
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
+    try {
+      const saved = localStorage.getItem('prime_vehicles');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.length > 0 ? parsed : INITIAL_VEHICLES;
+    } catch { return INITIAL_VEHICLES; }
+  });
+
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    try {
+      const saved = localStorage.getItem('prime_customers');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.length > 0 ? parsed : INITIAL_CUSTOMERS;
+    } catch { return INITIAL_CUSTOMERS; }
+  });
+
+  // Outros estados operacionais (estes podem começar vazios)
   const [agregados, setAgregados] = useState<Agregado[]>(() => JSON.parse(localStorage.getItem('prime_agregados') || '[]'));
   const [fuelings, setFuelings] = useState<Fueling[]>(() => JSON.parse(localStorage.getItem('prime_fuelings') || '[]'));
   const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>(() => JSON.parse(localStorage.getItem('prime_maintenances') || '[]'));
@@ -52,7 +75,6 @@ const App: React.FC = () => {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => JSON.parse(localStorage.getItem('prime_fixed_expenses') || '[]'));
   const [agregadoFreights, setAgregadoFreights] = useState<AgregadoFreight[]>(() => JSON.parse(localStorage.getItem('prime_agregado_freights') || '[]'));
 
-  // Efeito para salvar no localStorage sempre que houver mudança
   useEffect(() => {
     localStorage.setItem('prime_users', JSON.stringify(users));
     localStorage.setItem('prime_vehicles', JSON.stringify(vehicles));
@@ -71,7 +93,7 @@ const App: React.FC = () => {
     const savedUserId = localStorage.getItem('prime_group_user_id');
     const savedSession = localStorage.getItem('prime_group_session');
     
-    if (savedUserId) {
+    if (savedUserId && !currentUser) {
       const user = users.find(u => u.id === savedUserId);
       if (user && user.ativo) {
         setCurrentUser(user);
@@ -79,10 +101,10 @@ const App: React.FC = () => {
         setCurrentPage('operation');
       }
     }
-  }, [users]);
+  }, [users, currentUser]);
 
   const navigate = (page: string) => {
-    if (!currentUser) {
+    if (!currentUser && page !== 'login') {
       setCurrentPage('login');
       return;
     }
@@ -104,7 +126,6 @@ const App: React.FC = () => {
     navigate('login');
   };
 
-  // Handlers Genéricos de Atualização
   const updateList = (setFn: any, id: string, update: any) => {
     setFn((prev: any[]) => prev.map(item => item.id === id ? { ...item, ...update } : item));
   };
@@ -112,7 +133,6 @@ const App: React.FC = () => {
   const renderPage = () => {
     if (!currentUser) return <Login onLogin={handleLogin} users={users} />;
 
-    // Bloqueio de tela operacional se não tiver placa (exceto admin)
     const isAnyAdmin = currentUser.perfil === UserRole.ADMIN || currentUser.perfil === UserRole.CUSTOM_ADMIN;
     const isOperational = currentUser.perfil === UserRole.MOTORISTA || currentUser.perfil === UserRole.AJUDANTE;
     const restrictedPages = ['fueling', 'maintenance', 'route', 'daily-route'];
@@ -131,7 +151,6 @@ const App: React.FC = () => {
           setSession(s); localStorage.setItem('prime_group_session', JSON.stringify(s)); navigate('operation');
         }} onBack={() => navigate('operation')} />;
 
-      // MOTORISTA
       case 'fueling':
         return <FuelingForm session={session!} user={currentUser} onBack={() => navigate('operation')} onSubmit={(f) => { setFuelings([f, ...fuelings]); navigate('operation'); }} />;
       case 'maintenance':
@@ -140,14 +159,10 @@ const App: React.FC = () => {
         return <DriverDailyRoute session={session!} user={currentUser} customers={customers} onBack={() => navigate('operation')} onSubmit={(dr) => { setDailyRoutes([dr, ...dailyRoutes]); navigate('operation'); }} />;
       case 'my-requests':
         return <MyRequests fuelings={fuelings.filter(f => f.motoristaId === currentUser.id)} maintenances={maintenances.filter(m => m.motoristaId === currentUser.id)} onBack={() => navigate('operation')} />;
-
-      // AJUDANTE
       case 'route':
         return <RouteForm session={session!} user={currentUser} drivers={users.filter(u => u.perfil === UserRole.MOTORISTA)} customers={customers} onBack={() => navigate('operation')} onSubmit={(r) => { setRoutes([r, ...routes]); navigate('operation'); }} />;
       case 'my-routes':
         return <MyRoutes routes={routes.filter(r => r.ajudanteId === currentUser.id)} onBack={() => navigate('operation')} />;
-
-      // ADMIN
       case 'admin-dashboard':
         return <AdminDashboard fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
       case 'admin-pending':
@@ -160,9 +175,9 @@ const App: React.FC = () => {
           onBack={() => navigate('operation')} 
         />;
       case 'user-mgmt':
-        return <UserManagement users={users} setUsers={setUsers} onBack={() => navigate('operation')} />;
+        return <UserManagement users={users} setUsers={setUsers as any} onBack={() => navigate('operation')} />;
       case 'vehicle-mgmt':
-        return <VehicleManagement vehicles={vehicles} setVehicles={setVehicles} onBack={() => navigate('operation')} />;
+        return <VehicleManagement vehicles={vehicles} setVehicles={setVehicles as any} onBack={() => navigate('operation')} />;
       case 'admin-tracking':
         return <AdminTracking vehicles={vehicles} onUpdateVehicle={(id, up) => updateList(setVehicles, id, up)} onBack={() => navigate('operation')} />;
       case 'admin-checklists':
@@ -197,7 +212,7 @@ const App: React.FC = () => {
       case 'admin-agregado-mgmt':
         return <AdminAgregadoManagement agregados={agregados} onUpdateAgregados={setAgregados} onBack={() => navigate('operation')} />;
       case 'admin-customers':
-        return <AdminCustomerManagement customers={customers} setCustomers={setCustomers} onBack={() => navigate('operation')} />;
+        return <AdminCustomerManagement customers={customers} setCustomers={setCustomers as any} onBack={() => navigate('operation')} />;
       case 'tech-docs':
         return <TechnicalDocs onBack={() => navigate('operation')} />;
 
