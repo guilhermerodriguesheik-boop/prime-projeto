@@ -12,7 +12,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('login');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
-  const [syncDetails, setSyncDetails] = useState<string>('');
+  const [cloudStats, setCloudStats] = useState({ users: 0, vehicles: 0 });
 
   // States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -28,60 +28,81 @@ const App: React.FC = () => {
     if (!supabase) return;
     setIsSyncing(true);
     setLastSyncError(null);
-    console.log("Sincronizando...");
 
     try {
-      const fetchTable = async (table: string) => {
-        const { data, error } = await supabase.from(table).select('*');
-        if (error) throw error;
-        return data || [];
-      };
+      // Busca paralela para velocidade
+      const [resU, resV, resC, resF, resM, resR, resD] = await Promise.all([
+        supabase.from('users').select('*'),
+        supabase.from('vehicles').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('fuelings').select('*'),
+        supabase.from('maintenance_requests').select('*'),
+        supabase.from('route_departures').select('*'),
+        supabase.from('daily_routes').select('*')
+      ]);
 
-      const dbUsers = await fetchTable('users');
-      const dbVehicles = await fetchTable('vehicles');
-      const dbCustomers = await fetchTable('customers');
-      const dbFuelings = await fetchTable('fuelings');
-      const dbMaintenances = await fetchTable('maintenance_requests');
-      const dbRoutes = await fetchTable('route_departures');
-      const dbDaily = await fetchTable('daily_routes');
+      if (resU.error) throw resU.error;
 
-      if (dbUsers.length > 0) setUsers(dbUsers.map(mapFromDb));
-      if (dbVehicles.length > 0) setVehicles(dbVehicles.map(mapFromDb));
-      if (dbCustomers.length > 0) setCustomers(dbCustomers.map(mapFromDb));
+      // Só substitui os locais se houver dados na nuvem
+      if (resU.data && resU.data.length > 0) setUsers(resU.data.map(mapFromDb));
+      if (resV.data && resV.data.length > 0) setVehicles(resV.data.map(mapFromDb));
+      if (resC.data && resC.data.length > 0) setCustomers(resC.data.map(mapFromDb));
       
-      setFuelings(dbFuelings.map(mapFromDb));
-      setMaintenances(dbMaintenances.map(mapFromDb));
-      setRoutes(dbRoutes.map(mapFromDb));
-      setDailyRoutes(dbDaily.map(mapFromDb));
+      if (resF.data) setFuelings(resF.data.map(mapFromDb));
+      if (resM.data) setMaintenances(resM.data.map(mapFromDb));
+      if (resR.data) setRoutes(resR.data.map(mapFromDb));
+      if (resD.data) setDailyRoutes(resD.data.map(mapFromDb));
 
-      setSyncDetails(`${dbUsers.length} usuários, ${dbVehicles.length} veículos`);
+      setCloudStats({ users: resU.data?.length || 0, vehicles: resV.data?.length || 0 });
     } catch (e: any) {
-      console.error("Erro de sincronização:", e);
-      setLastSyncError(e.message || "Erro desconhecido");
+      console.error("Erro na Sincronização:", e);
+      setLastSyncError(e.message || "Erro de conexão com Supabase");
     } finally {
       setIsSyncing(false);
     }
   }, []);
 
+  // Função para semear o banco se estiver vazio (apenas para Admin Guilherme logado localmente)
+  const seedCloud = async () => {
+    if (!supabase || !confirm("Deseja enviar os dados iniciais locais para a nuvem?")) return;
+    setIsSyncing(true);
+    try {
+      await supabase.from('users').upsert(users.map(mapToDb));
+      await supabase.from('vehicles').upsert(vehicles.map(mapToDb));
+      await supabase.from('customers').upsert(customers.map(mapToDb));
+      alert("Nuvem semeada com sucesso!");
+      syncWithCloud();
+    } catch (e: any) {
+      alert("Erro ao semear: " + e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     syncWithCloud();
     const savedUserId = localStorage.getItem('prime_group_user_id');
     const savedSession = localStorage.getItem('prime_group_session');
-    
     if (savedUserId) {
+      // Pequeno delay para garantir que o syncWithCloud terminou
       setTimeout(() => {
-        setUsers(prevUsers => {
-          const user = prevUsers.find(u => u.id === savedUserId);
+        setUsers(prev => {
+          const user = prev.find(u => u.id === savedUserId);
           if (user && user.ativo) {
             setCurrentUser(user);
             if (savedSession) setSession(JSON.parse(savedSession));
             setCurrentPage('operation');
           }
-          return prevUsers;
+          return prev;
         });
-      }, 800);
+      }, 1000);
     }
   }, [syncWithCloud]);
+
+  const navigate = (page: string) => {
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -97,45 +118,26 @@ const App: React.FC = () => {
     navigate('login');
   };
 
-  const navigate = (page: string) => {
-    setCurrentPage(page);
-    window.scrollTo(0, 0);
-  };
-
   const saveRecord = async (table: string, record: any, setFn: any) => {
-    // Adiciona localmente primeiro
     setFn((prev: any[]) => [record, ...prev]);
-    
     if (!supabase) return;
     try {
-      const dbRecord = mapToDb(record);
-      const { error } = await supabase.from(table).insert([dbRecord]);
-      if (error) {
-        alert(`Erro na Nuvem: ${error.message}`);
-        console.error("Erro insert:", error);
-      } else {
-        console.log(`Sucesso ao salvar em ${table}`);
-      }
-    } catch (e: any) {
-      console.error("Exceção ao salvar:", e);
-    }
+      const { error } = await supabase.from(table).insert([mapToDb(record)]);
+      if (error) console.error(`Erro ao salvar em ${table}:`, error.message);
+    } catch (e) { console.error(e); }
   };
 
   const updateRecord = async (table: string, id: string, update: any, setFn: any) => {
-    setFn((prev: any[]) => prev.map(item => item.id === id ? { ...item, ...update } : item));
+    setFn((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...update } : i));
     if (!supabase) return;
     try {
-      const dbUpdate = mapToDb(update);
-      const { error } = await supabase.from(table).update(dbUpdate).eq('id', id);
-      if (error) console.error("Erro update:", error.message);
-    } catch (e) {
-      console.error(e);
-    }
+      const { error } = await supabase.from(table).update(mapToDb(update)).eq('id', id);
+      if (error) console.error(`Erro ao atualizar em ${table}:`, error.message);
+    } catch (e) { console.error(e); }
   };
 
-  // Lazy components
+  // Lazy pages...
   const Login = React.lazy(() => import('./pages/Login'));
-  const VehicleSelection = React.lazy(() => import('./pages/VehicleSelection'));
   const OperationHome = React.lazy(() => import('./pages/OperationHome'));
   const FuelingForm = React.lazy(() => import('./pages/FuelingForm'));
   const MaintenanceForm = React.lazy(() => import('./pages/MaintenanceForm'));
@@ -146,7 +148,6 @@ const App: React.FC = () => {
   const AdminPending = React.lazy(() => import('./pages/AdminPending'));
   const UserManagement = React.lazy(() => import('./pages/UserManagement'));
   const VehicleManagement = React.lazy(() => import('./pages/VehicleManagement'));
-  const TechnicalDocs = React.lazy(() => import('./pages/TechnicalDocs'));
   const DriverDailyRoute = React.lazy(() => import('./pages/DriverDailyRoute'));
   const AdminVehicleReport = React.lazy(() => import('./pages/AdminVehicleReport'));
   const AdminActivityReport = React.lazy(() => import('./pages/AdminActivityReport'));
@@ -154,21 +155,12 @@ const App: React.FC = () => {
   const AdminFixedExpenses = React.lazy(() => import('./pages/AdminFixedExpenses'));
   const AdminTracking = React.lazy(() => import('./pages/AdminTracking'));
   const AdminConsolidatedFinancialReport = React.lazy(() => import('./pages/AdminConsolidatedFinancialReport'));
+  const VehicleSelection = React.lazy(() => import('./pages/VehicleSelection'));
 
   const renderPage = () => {
-    if (!currentUser) return (
-      <React.Suspense fallback={null}>
-        <Login 
-          onLogin={handleLogin} 
-          users={users} 
-          syncStatus={isSyncing ? 'syncing' : lastSyncError ? 'error' : 'ok'}
-          syncError={lastSyncError}
-        />
-      </React.Suspense>
-    );
+    if (!currentUser) return <React.Suspense fallback={null}><Login onLogin={handleLogin} users={users} syncStatus={isSyncing ? 'syncing' : lastSyncError ? 'error' : 'ok'} syncError={lastSyncError} /></React.Suspense>;
 
-    const perf = currentUser.perfil?.toLowerCase();
-    const isOp = perf === UserRole.MOTORISTA || perf === UserRole.AJUDANTE;
+    const isOp = currentUser.perfil === UserRole.MOTORISTA || currentUser.perfil === UserRole.AJUDANTE;
     const restricted = ['fueling', 'maintenance', 'route', 'daily-route'];
 
     if (isOp && restricted.includes(currentPage) && !session) {
@@ -195,8 +187,6 @@ const App: React.FC = () => {
       case 'admin-activity-report': return <AdminActivityReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} onUpdateFueling={(id, up) => updateRecord('fuelings', id, up, setFuelings)} onUpdateMaintenance={(id, up) => updateRecord('maintenance_requests', id, up, setMaintenances)} onBack={() => navigate('operation')} />;
       case 'admin-vehicle-report': return <AdminVehicleReport fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} dailyRoutes={dailyRoutes} routes={routes} tolls={[]} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} />;
       case 'admin-checklists': return <AdminChecklistReport dailyRoutes={dailyRoutes} users={users} vehicles={vehicles} onBack={() => navigate('operation')} />;
-      case 'tech-docs': return <TechnicalDocs onBack={() => navigate('operation')} />;
-      case 'select-vehicle': return <VehicleSelection vehicles={vehicles} onSelect={(vId, pl) => { const s = { userId: currentUser.id, vehicleId: vId, placa: pl, updatedAt: new Date().toISOString() }; setSession(s); localStorage.setItem('prime_group_session', JSON.stringify(s)); navigate('operation'); }} onBack={() => navigate('operation')} />;
       default: return <OperationHome user={currentUser} session={session} onNavigate={navigate} onLogout={handleLogout} />;
     }
   };
@@ -209,31 +199,28 @@ const App: React.FC = () => {
         </div>
         {currentUser && (
           <div className="flex items-center gap-4">
-            <div className="hidden lg:flex flex-col items-end mr-2">
-               <span className={`text-[8px] font-black uppercase tracking-widest ${lastSyncError ? 'text-red-500' : 'text-emerald-500'}`}>
-                 {isSyncing ? 'Sincronizando...' : lastSyncError ? 'Erro de Sync' : 'Dados Sincronizados'}
+             <div className="hidden lg:flex flex-col items-end">
+               <span className={`text-[8px] font-black uppercase ${lastSyncError ? 'text-red-500' : 'text-emerald-500'}`}>
+                 {isSyncing ? 'Sync...' : lastSyncError ? 'Erro DB' : 'Nuvem Conectada'}
                </span>
-               <span className="text-[7px] text-slate-500 uppercase">{syncDetails}</span>
-            </div>
-            <button 
-              onClick={syncWithCloud} 
-              className={`p-2 rounded-full transition-all ${isSyncing ? 'bg-blue-600 animate-spin' : 'hover:bg-slate-800'}`}
-              title="Sincronizar agora"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+               <span className="text-[7px] text-slate-500">Cloud: {cloudStats.users} usuários / {cloudStats.vehicles} vtrs</span>
+             </div>
+             {currentUser.perfil === UserRole.ADMIN && cloudStats.users === 0 && (
+               <button onClick={seedCloud} className="bg-blue-600 text-white px-2 py-1 rounded text-[8px] font-bold">SEMEAR NUVEM</button>
+             )}
+            <button onClick={syncWithCloud} className={`p-1.5 rounded-full ${isSyncing ? 'animate-spin text-blue-500' : 'text-slate-500 hover:text-white'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
             <div className="hidden md:block text-right">
               <div className="text-xs font-bold text-white uppercase">{currentUser.nome}</div>
               <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{currentUser.perfil}</div>
             </div>
-            <button onClick={handleLogout} className="bg-red-900/30 text-red-400 px-3 py-1.5 rounded-lg text-xs font-black uppercase border border-red-900/20 hover:bg-red-900/50 transition-all">Sair</button>
+            <button onClick={handleLogout} className="bg-red-900/30 text-red-400 px-3 py-1.5 rounded-lg text-xs font-black uppercase border border-red-900/20">Sair</button>
           </div>
         )}
       </header>
       <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
-        <React.Suspense fallback={<div className="flex items-center justify-center p-20 text-slate-500 font-bold animate-pulse uppercase tracking-[0.3em]">Carregando Sistema...</div>}>
+        <React.Suspense fallback={<div className="p-20 text-center font-bold animate-pulse text-slate-700">INICIALIZANDO...</div>}>
           {renderPage()}
         </React.Suspense>
       </main>

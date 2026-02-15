@@ -1,13 +1,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Credenciais enviadas pelo usuário
 const supabaseUrl = 'https://sqlrsuqvphcxskiygqfn.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbHJzdXF2cGhjeHNraXlncWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExMjQ1NDIsImV4cCI6MjA4NjcwMDU0Mn0.pTiFiGuoMTwrJgnn4_NC-zLP6HOTuJinxuAdJioLQYc';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Mapa de conversão de nomes de campos (App camelCase -> Banco snake_case)
 const FIELD_MAP: Record<string, string> = {
   vehicleId: 'vehicle_id',
   motoristaId: 'motorista_id',
@@ -32,19 +30,13 @@ const FIELD_MAP: Record<string, string> = {
   statusFinanceiro: 'status_financeiro',
   adminFinanceiroId: 'admin_financeiro_id',
   fotoFrente: 'foto_frente',
-  fotoLateralEsquerda: 'foto_lateral_esquerda',
-  fotoLateralDireita: 'foto_lateral_direita',
-  fotoTraseira: 'foto_traseira',
   nivelOleo: 'nivel_oleo',
   nivelAgua: 'nivel_agua',
   dataCompetencia: 'data_competencia',
-  agregadoId: 'agregado_id',
-  nomeAgregado: 'nome_agregado',
-  valorAgregado: 'valor_agregado',
   proximaManutencaoKm: 'proxima_manutencao_km',
   trackerId: 'tracker_id',
   isOnline: 'is_online',
-  finishedAt: 'finished_at'
+  preventiveTasks: 'preventive_tasks'
 };
 
 export const mapFromDb = (item: any) => {
