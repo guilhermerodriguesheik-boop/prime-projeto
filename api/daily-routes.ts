@@ -21,20 +21,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
-      const map: Record<string, string> = {
-        ajudanteId: 'ajudante_id', ajudanteNome: 'ajudante_nome',
-        valorFrete: 'valor_frete', valorMotorista: 'valor_motorista',
-        valorAjudante: 'valor_ajudante', statusFinanceiro: 'status_financeiro',
-        adminFinanceiroId: 'admin_financeiro_id',
-        fotoFrente: 'foto_frente', fotoLateralEsquerda: 'foto_lateral_esquerda',
-        fotoLateralDireita: 'foto_lateral_direita', fotoTraseira: 'foto_traseira',
-        nivelOleo: 'nivel_oleo', nivelAgua: 'nivel_agua'
-      };
-      for (const [k, v] of Object.entries(updates)) {
-        if (map[k]) {
-          await sql`UPDATE daily_routes SET ${sql.unsafe(map[k])} = ${v} WHERE id = ${id}`;
-        }
-      }
+      if (updates.ajudanteId !== undefined) await sql`UPDATE daily_routes SET ajudante_id = ${updates.ajudanteId} WHERE id = ${id}`;
+      if (updates.ajudanteNome !== undefined) await sql`UPDATE daily_routes SET ajudante_nome = ${updates.ajudanteNome} WHERE id = ${id}`;
+      if (updates.valorFrete !== undefined) await sql`UPDATE daily_routes SET valor_frete = ${updates.valorFrete} WHERE id = ${id}`;
+      if (updates.valorMotorista !== undefined) await sql`UPDATE daily_routes SET valor_motorista = ${updates.valorMotorista} WHERE id = ${id}`;
+      if (updates.valorAjudante !== undefined) await sql`UPDATE daily_routes SET valor_ajudante = ${updates.valorAjudante} WHERE id = ${id}`;
+      if (updates.statusFinanceiro !== undefined) await sql`UPDATE daily_routes SET status_financeiro = ${updates.statusFinanceiro} WHERE id = ${id}`;
+      if (updates.adminFinanceiroId !== undefined) await sql`UPDATE daily_routes SET admin_financeiro_id = ${updates.adminFinanceiroId} WHERE id = ${id}`;
+      if (updates.fotoFrente !== undefined) await sql`UPDATE daily_routes SET foto_frente = ${updates.fotoFrente} WHERE id = ${id}`;
+      if (updates.fotoLateralEsquerda !== undefined) await sql`UPDATE daily_routes SET foto_lateral_esquerda = ${updates.fotoLateralEsquerda} WHERE id = ${id}`;
+      if (updates.fotoLateralDireita !== undefined) await sql`UPDATE daily_routes SET foto_lateral_direita = ${updates.fotoLateralDireita} WHERE id = ${id}`;
+      if (updates.fotoTraseira !== undefined) await sql`UPDATE daily_routes SET foto_traseira = ${updates.fotoTraseira} WHERE id = ${id}`;
+      if (updates.nivelOleo !== undefined) await sql`UPDATE daily_routes SET nivel_oleo = ${updates.nivelOleo} WHERE id = ${id}`;
+      if (updates.nivelAgua !== undefined) await sql`UPDATE daily_routes SET nivel_agua = ${updates.nivelAgua} WHERE id = ${id}`;
       return res.json({ ok: true });
     }
 

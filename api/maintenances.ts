@@ -21,17 +21,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
-      const map: Record<string, string> = {
-        status: 'status', adminResponsavelId: 'admin_responsavel_id',
-        assumedAt: 'assumed_at', startedAt: 'started_at', doneAt: 'done_at',
-        oficina: 'oficina', valor: 'valor', notaFoto: 'nota_foto',
-        observacaoAdmin: 'observacao_admin'
-      };
-      for (const [k, v] of Object.entries(updates)) {
-        if (map[k]) {
-          await sql`UPDATE maintenances SET ${sql.unsafe(map[k])} = ${v} WHERE id = ${id}`;
-        }
-      }
+      if (updates.status !== undefined) await sql`UPDATE maintenances SET status = ${updates.status} WHERE id = ${id}`;
+      if (updates.adminResponsavelId !== undefined) await sql`UPDATE maintenances SET admin_responsavel_id = ${updates.adminResponsavelId} WHERE id = ${id}`;
+      if (updates.assumedAt !== undefined) await sql`UPDATE maintenances SET assumed_at = ${updates.assumedAt} WHERE id = ${id}`;
+      if (updates.startedAt !== undefined) await sql`UPDATE maintenances SET started_at = ${updates.startedAt} WHERE id = ${id}`;
+      if (updates.doneAt !== undefined) await sql`UPDATE maintenances SET done_at = ${updates.doneAt} WHERE id = ${id}`;
+      if (updates.oficina !== undefined) await sql`UPDATE maintenances SET oficina = ${updates.oficina} WHERE id = ${id}`;
+      if (updates.valor !== undefined) await sql`UPDATE maintenances SET valor = ${updates.valor} WHERE id = ${id}`;
+      if (updates.notaFoto !== undefined) await sql`UPDATE maintenances SET nota_foto = ${updates.notaFoto} WHERE id = ${id}`;
+      if (updates.observacaoAdmin !== undefined) await sql`UPDATE maintenances SET observacao_admin = ${updates.observacaoAdmin} WHERE id = ${id}`;
       return res.json({ ok: true });
     }
 

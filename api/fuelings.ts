@@ -21,15 +21,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
-      const map: Record<string, string> = {
-        status: 'status', motivoRejeicao: 'motivo_rejeicao',
-        adminAprovadorId: 'admin_aprovador_id', approvedAt: 'approved_at'
-      };
-      for (const [k, v] of Object.entries(updates)) {
-        if (map[k]) {
-          await sql`UPDATE fuelings SET ${sql.unsafe(map[k])} = ${v} WHERE id = ${id}`;
-        }
-      }
+      if (updates.status !== undefined) await sql`UPDATE fuelings SET status = ${updates.status} WHERE id = ${id}`;
+      if (updates.motivoRejeicao !== undefined) await sql`UPDATE fuelings SET motivo_rejeicao = ${updates.motivoRejeicao} WHERE id = ${id}`;
+      if (updates.adminAprovadorId !== undefined) await sql`UPDATE fuelings SET admin_aprovador_id = ${updates.adminAprovadorId} WHERE id = ${id}`;
+      if (updates.approvedAt !== undefined) await sql`UPDATE fuelings SET approved_at = ${updates.approvedAt} WHERE id = ${id}`;
       return res.json({ ok: true });
     }
 

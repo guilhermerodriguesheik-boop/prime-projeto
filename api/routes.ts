@@ -21,18 +21,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
-      const map: Record<string, string> = {
-        status: 'status', finishedAt: 'finished_at', observacao: 'observacao',
-        valorFrete: 'valor_frete', valorMotorista: 'valor_motorista',
-        valorAjudante: 'valor_ajudante', statusFinanceiro: 'status_financeiro',
-        adminFinanceiroId: 'admin_financeiro_id',
-        ajudanteId: 'ajudante_id', ajudanteNome: 'ajudante_nome'
-      };
-      for (const [k, v] of Object.entries(updates)) {
-        if (map[k]) {
-          await sql`UPDATE routes SET ${sql.unsafe(map[k])} = ${v} WHERE id = ${id}`;
-        }
-      }
+      if (updates.status !== undefined) await sql`UPDATE routes SET status = ${updates.status} WHERE id = ${id}`;
+      if (updates.finishedAt !== undefined) await sql`UPDATE routes SET finished_at = ${updates.finishedAt} WHERE id = ${id}`;
+      if (updates.observacao !== undefined) await sql`UPDATE routes SET observacao = ${updates.observacao} WHERE id = ${id}`;
+      if (updates.valorFrete !== undefined) await sql`UPDATE routes SET valor_frete = ${updates.valorFrete} WHERE id = ${id}`;
+      if (updates.valorMotorista !== undefined) await sql`UPDATE routes SET valor_motorista = ${updates.valorMotorista} WHERE id = ${id}`;
+      if (updates.valorAjudante !== undefined) await sql`UPDATE routes SET valor_ajudante = ${updates.valorAjudante} WHERE id = ${id}`;
+      if (updates.statusFinanceiro !== undefined) await sql`UPDATE routes SET status_financeiro = ${updates.statusFinanceiro} WHERE id = ${id}`;
+      if (updates.adminFinanceiroId !== undefined) await sql`UPDATE routes SET admin_financeiro_id = ${updates.adminFinanceiroId} WHERE id = ${id}`;
+      if (updates.ajudanteId !== undefined) await sql`UPDATE routes SET ajudante_id = ${updates.ajudanteId} WHERE id = ${id}`;
+      if (updates.ajudanteNome !== undefined) await sql`UPDATE routes SET ajudante_nome = ${updates.ajudanteNome} WHERE id = ${id}`;
       return res.json({ ok: true });
     }
 

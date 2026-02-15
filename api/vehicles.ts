@@ -30,21 +30,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       const { id, ...updates } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
-      // Build dynamic update
-      const fields: string[] = [];
-      const vals: any[] = [];
-      const map: Record<string, string> = {
-        placa: 'placa', modelo: 'modelo', kmAtual: 'km_atual', status: 'status',
-        preventiveTasks: 'preventive_tasks', proximaManutencaoKm: 'proxima_manutencao_km',
-        ultimaRevisaoData: 'ultima_revisao_data', trackerId: 'tracker_id',
-        lastLat: 'last_lat', lastLng: 'last_lng', isOnline: 'is_online'
-      };
-      for (const [k, v] of Object.entries(updates)) {
-        if (map[k]) {
-          const val = k === 'preventiveTasks' ? JSON.stringify(v) : v;
-          await sql`UPDATE vehicles SET ${sql.unsafe(map[k])} = ${val} WHERE id = ${id}`;
-        }
-      }
+      if (updates.placa !== undefined) await sql`UPDATE vehicles SET placa = ${updates.placa} WHERE id = ${id}`;
+      if (updates.modelo !== undefined) await sql`UPDATE vehicles SET modelo = ${updates.modelo} WHERE id = ${id}`;
+      if (updates.kmAtual !== undefined) await sql`UPDATE vehicles SET km_atual = ${updates.kmAtual} WHERE id = ${id}`;
+      if (updates.status !== undefined) await sql`UPDATE vehicles SET status = ${updates.status} WHERE id = ${id}`;
+      if (updates.preventiveTasks !== undefined) await sql`UPDATE vehicles SET preventive_tasks = ${JSON.stringify(updates.preventiveTasks)} WHERE id = ${id}`;
+      if (updates.proximaManutencaoKm !== undefined) await sql`UPDATE vehicles SET proxima_manutencao_km = ${updates.proximaManutencaoKm} WHERE id = ${id}`;
+      if (updates.ultimaRevisaoData !== undefined) await sql`UPDATE vehicles SET ultima_revisao_data = ${updates.ultimaRevisaoData} WHERE id = ${id}`;
+      if (updates.trackerId !== undefined) await sql`UPDATE vehicles SET tracker_id = ${updates.trackerId} WHERE id = ${id}`;
+      if (updates.lastLat !== undefined) await sql`UPDATE vehicles SET last_lat = ${updates.lastLat} WHERE id = ${id}`;
+      if (updates.lastLng !== undefined) await sql`UPDATE vehicles SET last_lng = ${updates.lastLng} WHERE id = ${id}`;
+      if (updates.isOnline !== undefined) await sql`UPDATE vehicles SET is_online = ${updates.isOnline} WHERE id = ${id}`;
       // Re-fetch and return
       const [row] = await sql`SELECT * FROM vehicles WHERE id = ${id}`;
       if (!row) return res.status(404).json({ error: 'Not found' });
