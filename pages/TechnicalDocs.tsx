@@ -66,7 +66,7 @@ const TechnicalDocs: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <strong>Importante:</strong> Você precisa ter o <a href="https://developer.android.com/studio" target="_blank" className="text-blue-400 underline">Android Studio</a> instalado.
               </div>
               <p>Ao rodar o comando <code>npm run android:open</code>, o Android Studio abrirá o projeto automaticamente.</p>
-              <p>Lá dentro, vá em: <strong>Build > Generate Signed Bundle / APK</strong> para criar o arquivo oficial da Play Store.</p>
+              <p>Lá dentro, vá em: <strong>Build &gt; Generate Signed Bundle / APK</strong> para criar o arquivo oficial da Play Store.</p>
             </div>
           </Card>
         </section>
