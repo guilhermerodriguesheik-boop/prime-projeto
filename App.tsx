@@ -1,92 +1,80 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   User, UserSession, UserRole, Fueling, MaintenanceRequest, 
   RouteDeparture, Vehicle, DailyRoute, Toll, Customer, 
   FixedExpense, AgregadoFreight, Agregado, 
   FuelingStatus, MaintenanceStatus, RouteStatus, FinanceiroStatus 
 } from './types';
-import { INITIAL_USERS, INITIAL_VEHICLES, INITIAL_CUSTOMERS } from './constants';
 import { Logo } from './components/UI';
+import { api } from './apiClient';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [session, setSession] = useState<UserSession | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('login');
+  const [loading, setLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'loading' | 'ok' | 'error'>('loading');
 
-  // Estados dos Dados com Inicialização do LocalStorage
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('pg_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
+  // Estados dos Dados (carregados da API)
+  const [users, setUsers] = useState<User[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [fuelings, setFuelings] = useState<Fueling[]>([]);
+  const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>([]);
+  const [routes, setRoutes] = useState<RouteDeparture[]>([]);
+  const [dailyRoutes, setDailyRoutes] = useState<DailyRoute[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [agregados, setAgregados] = useState<Agregado[]>([]);
+  const [agregadoFreights, setAgregadoFreights] = useState<AgregadoFreight[]>([]);
+  const [tolls, setTolls] = useState<Toll[]>([]);
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
-    const saved = localStorage.getItem('pg_vehicles');
-    return saved ? JSON.parse(saved) : INITIAL_VEHICLES;
-  });
+  // Carregar todos os dados da API
+  const loadAllData = useCallback(async () => {
+    try {
+      setSyncStatus('loading');
+      const [u, v, c, f, m, r, dr, fe, ag, af, t] = await Promise.all([
+        api.getUsers(),
+        api.getVehicles(),
+        api.getCustomers(),
+        api.getFuelings(),
+        api.getMaintenances(),
+        api.getRoutes(),
+        api.getDailyRoutes(),
+        api.getFixedExpenses(),
+        api.getAgregados(),
+        api.getAgregadoFreights(),
+        api.getTolls(),
+      ]);
+      setUsers(u);
+      setVehicles(v);
+      setCustomers(c);
+      setFuelings(f);
+      setMaintenances(m);
+      setRoutes(r);
+      setDailyRoutes(dr);
+      setFixedExpenses(fe);
+      setAgregados(ag);
+      setAgregadoFreights(af);
+      setTolls(t);
+      setSyncStatus('ok');
+    } catch (err) {
+      console.error('Failed to load data from API:', err);
+      setSyncStatus('error');
+    }
+  }, []);
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('pg_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
-
-  const [fuelings, setFuelings] = useState<Fueling[]>(() => {
-    const saved = localStorage.getItem('pg_fuelings');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>(() => {
-    const saved = localStorage.getItem('pg_maintenances');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [routes, setRoutes] = useState<RouteDeparture[]>(() => {
-    const saved = localStorage.getItem('pg_routes');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [dailyRoutes, setDailyRoutes] = useState<DailyRoute[]>(() => {
-    const saved = localStorage.getItem('pg_daily_routes');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => {
-    const saved = localStorage.getItem('pg_fixed_expenses');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [agregados, setAgregados] = useState<Agregado[]>(() => {
-    const saved = localStorage.getItem('pg_agregados');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [agregadoFreights, setAgregadoFreights] = useState<AgregadoFreight[]>(() => {
-    const saved = localStorage.getItem('pg_agregado_freights');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [tolls, setTolls] = useState<Toll[]>(() => {
-    const saved = localStorage.getItem('pg_tolls');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Efeito de Persistência (Salva no LocalStorage sempre que algo muda)
+  // Carregar dados e restaurar sessao ao iniciar
   useEffect(() => {
-    localStorage.setItem('pg_users', JSON.stringify(users));
-    localStorage.setItem('pg_vehicles', JSON.stringify(vehicles));
-    localStorage.setItem('pg_customers', JSON.stringify(customers));
-    localStorage.setItem('pg_fuelings', JSON.stringify(fuelings));
-    localStorage.setItem('pg_maintenances', JSON.stringify(maintenances));
-    localStorage.setItem('pg_routes', JSON.stringify(routes));
-    localStorage.setItem('pg_daily_routes', JSON.stringify(dailyRoutes));
-    localStorage.setItem('pg_fixed_expenses', JSON.stringify(fixedExpenses));
-    localStorage.setItem('pg_agregados', JSON.stringify(agregados));
-    localStorage.setItem('pg_agregado_freights', JSON.stringify(agregadoFreights));
-    localStorage.setItem('pg_tolls', JSON.stringify(tolls));
-  }, [users, vehicles, customers, fuelings, maintenances, routes, dailyRoutes, fixedExpenses, agregados, agregadoFreights, tolls]);
+    (async () => {
+      await loadAllData();
+      setLoading(false);
+    })();
+  }, [loadAllData]);
 
-  // Login Persistente
+  // Restaurar sessao do usuario apos carregar dados
   useEffect(() => {
+    if (loading || users.length === 0) return;
     const savedUserId = localStorage.getItem('prime_group_user_id');
     const savedSession = localStorage.getItem('prime_group_session');
     if (savedUserId) {
@@ -97,7 +85,7 @@ const App: React.FC = () => {
         setCurrentPage('operation');
       }
     }
-  }, []);
+  }, [loading, users]);
 
   const navigate = (page: string) => {
     setCurrentPage(page);
@@ -118,21 +106,27 @@ const App: React.FC = () => {
     navigate('login');
   };
 
-  const saveRecord = (setFn: any, record: any) => {
+  // Salvar novo registro: atualiza estado local + envia para API
+  const saveRecord = (setFn: any, record: any, apiCall: (r: any) => Promise<any>) => {
     setFn((prev: any) => [record, ...prev]);
+    apiCall(record).catch(err => console.error('API save error:', err));
   };
 
-  const updateRecord = (setFn: any, id: string, update: any) => {
+  // Atualizar registro existente: atualiza estado local + envia para API
+  const updateRecord = (setFn: any, id: string, update: any, apiCall?: (id: string, u: any) => Promise<any>) => {
     setFn((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...update } : i));
+    if (apiCall) apiCall(id, update).catch(err => console.error('API update error:', err));
   };
 
   const onSaveUser = async (u: User) => {
     const exists = users.find(x => x.id === u.id);
     setUsers(prev => exists ? prev.map(x => x.id === u.id ? u : x) : [u, ...prev]);
+    await api.saveUser(u).catch(err => console.error('API saveUser error:', err));
   };
 
   const onSaveVehicle = async (v: Vehicle) => {
     setVehicles(prev => [...prev, v]);
+    await api.saveVehicle(v).catch(err => console.error('API saveVehicle error:', err));
   };
 
   // Lazy Pages
