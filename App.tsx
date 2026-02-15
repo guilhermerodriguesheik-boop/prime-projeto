@@ -6,6 +6,7 @@ import {
   FixedExpense, AgregadoFreight, Agregado, 
   FuelingStatus, MaintenanceStatus, RouteStatus, FinanceiroStatus 
 } from './types';
+import { INITIAL_USERS, INITIAL_VEHICLES, INITIAL_CUSTOMERS } from './constants';
 import { Logo } from './components/UI';
 import { api } from './apiClient';
 
@@ -59,7 +60,11 @@ const App: React.FC = () => {
       setTolls(t);
       setSyncStatus('ok');
     } catch (err) {
-      console.error('Failed to load data from API:', err);
+      console.error('Failed to load data from API, using fallback:', err);
+      // Fallback: usar dados locais quando API nao esta disponivel
+      setUsers(INITIAL_USERS as User[]);
+      setVehicles(INITIAL_VEHICLES as Vehicle[]);
+      setCustomers(INITIAL_CUSTOMERS as Customer[]);
       setSyncStatus('error');
     }
   }, []);
