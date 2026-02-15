@@ -40,12 +40,12 @@ const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('login');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
 
-  // States: Começam com INITIAL_X para o app não abrir vazio/erro de login
+  // States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [vehicles, setVehicles] = useState<Vehicle[]>(INITIAL_VEHICLES);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-
   const [fuelings, setFuelings] = useState<Fueling[]>([]);
   const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>([]);
   const [routes, setRoutes] = useState<RouteDeparture[]>([]);
@@ -55,53 +55,56 @@ const App: React.FC = () => {
   const [agregados, setAgregados] = useState<Agregado[]>([]);
   const [agregadoFreights, setAgregadoFreights] = useState<AgregadoFreight[]>([]);
 
-  // Função para sincronizar dados do Banco de Dados
   const syncWithCloud = useCallback(async () => {
-    if (!supabase) {
-      console.warn("Supabase não configurado. Operando em modo Local.");
-      return;
-    }
+    if (!supabase) return;
     setIsSyncing(true);
+    setLastSyncError(null);
     try {
       const [
-        { data: sUsers }, 
-        { data: sVehicles }, 
-        { data: sFuelings }, 
-        { data: sMaintenances }, 
-        { data: sRoutes },
-        { data: sDailyRoutes }
+        { data: sUsers, error: errU }, 
+        { data: sVehicles, error: errV }, 
+        { data: sFuelings, error: errF }, 
+        { data: sMaintenances, error: errM }, 
+        { data: sRoutes, error: errR },
+        { data: sDailyRoutes, error: errD },
+        { data: sCustomers, error: errC }
       ] = await Promise.all([
         supabase.from('users').select('*'),
         supabase.from('vehicles').select('*'),
         supabase.from('fuelings').select('*').order('created_at', { ascending: false }),
         supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false }),
         supabase.from('route_departures').select('*').order('created_at', { ascending: false }),
-        supabase.from('daily_routes').select('*').order('created_at', { ascending: false })
+        supabase.from('daily_routes').select('*').order('created_at', { ascending: false }),
+        supabase.from('customers').select('*')
       ]);
 
-      // Atualiza states apenas se houver dados no banco
+      if (errU || errV || errF) {
+        throw new Error(errU?.message || errV?.message || errF?.message || "Erro desconhecido");
+      }
+
       if (sUsers && sUsers.length > 0) setUsers(sUsers.map(mapFromDb));
       if (sVehicles && sVehicles.length > 0) setVehicles(sVehicles.map(mapFromDb));
+      if (sCustomers && sCustomers.length > 0) setCustomers(sCustomers.map(mapFromDb));
       if (sFuelings) setFuelings(sFuelings.map(mapFromDb));
       if (sMaintenances) setMaintenances(sMaintenances.map(mapFromDb));
       if (sRoutes) setRoutes(sRoutes.map(mapFromDb));
       if (sDailyRoutes) setDailyRoutes(sDailyRoutes.map(mapFromDb));
 
-    } catch (e) {
-      console.error("Erro na sincronização:", e);
+      console.log("Sincronização completa com sucesso.");
+    } catch (e: any) {
+      console.error("Falha na sincronização:", e);
+      setLastSyncError(e.message);
     } finally {
       setIsSyncing(false);
     }
   }, []);
 
-  // Ao carregar o App
   useEffect(() => {
     syncWithCloud();
     const savedUserId = localStorage.getItem('prime_group_user_id');
     const savedSession = localStorage.getItem('prime_group_session');
     
     if (savedUserId) {
-      // Pequeno timeout para garantir que o syncWithCloud tentou carregar os usuários
       setTimeout(() => {
         const user = users.find(u => u.id === savedUserId);
         if (user && user.ativo) {
@@ -109,9 +112,9 @@ const App: React.FC = () => {
           if (savedSession) setSession(JSON.parse(savedSession));
           setCurrentPage('operation');
         }
-      }, 500);
+      }, 800);
     }
-  }, [syncWithCloud, users]);
+  }, [syncWithCloud]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -132,15 +135,20 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Funções de Persistência com Supabase
   const saveRecord = async (table: string, record: any, setFn: any) => {
     setFn((prev: any[]) => [record, ...prev]);
     if (!supabase) return;
     try {
-      const dbRecord = mapToDb(table, record);
-      await supabase.from(table).insert([dbRecord]);
+      const dbRecord = mapToDb(record);
+      const { error } = await supabase.from(table).insert([dbRecord]);
+      if (error) {
+        console.error(`Erro ao salvar em ${table}:`, error.message);
+        alert(`Erro de rede: ${error.message}`);
+      } else {
+        console.log(`Registro salvo em ${table} com sucesso.`);
+      }
     } catch (e) {
-      console.error(`Erro ao salvar em ${table}:`, e);
+      console.error(`Exceção ao salvar em ${table}:`, e);
     }
   };
 
@@ -148,10 +156,11 @@ const App: React.FC = () => {
     setFn((prev: any[]) => prev.map(item => item.id === id ? { ...item, ...update } : item));
     if (!supabase) return;
     try {
-      const dbUpdate = mapToDb(table, update);
-      await supabase.from(table).update(dbUpdate).eq('id', id);
+      const dbUpdate = mapToDb(update);
+      const { error } = await supabase.from(table).update(dbUpdate).eq('id', id);
+      if (error) console.error(`Erro ao atualizar ${table}:`, error.message);
     } catch (e) {
-      console.error(`Erro ao atualizar ${table}:`, e);
+      console.error(`Exceção ao atualizar ${table}:`, e);
     }
   };
 
@@ -202,15 +211,29 @@ const App: React.FC = () => {
           onBack={() => navigate('operation')} 
         />;
       case 'user-mgmt':
-        return <UserManagement users={users} setUsers={(u) => { setUsers(u as any); if(supabase) supabase.from('users').upsert(u as any); }} onBack={() => navigate('operation')} />;
+        // Fix for Error in App.tsx: Correctly handle functional state updates for users and sync with Supabase
+        return <UserManagement users={users} setUsers={(action) => {
+          setUsers((prev) => {
+            const next = typeof action === 'function' ? action(prev) : action;
+            if (supabase) supabase.from('users').upsert(next.map(mapToDb) as any);
+            return next;
+          });
+        }} onBack={() => navigate('operation')} />;
       case 'vehicle-mgmt':
-        return <VehicleManagement vehicles={vehicles} setVehicles={(v) => { setVehicles(v as any); if(supabase) supabase.from('vehicles').upsert(v as any); }} onBack={() => navigate('operation')} />;
+        // Fix for Error in App.tsx: Correctly handle functional state updates for vehicles and sync with Supabase
+        return <VehicleManagement vehicles={vehicles} setVehicles={(action) => {
+          setVehicles((prev) => {
+            const next = typeof action === 'function' ? action(prev) : action;
+            if (supabase) supabase.from('vehicles').upsert(next.map(mapToDb) as any);
+            return next;
+          });
+        }} onBack={() => navigate('operation')} />;
       case 'admin-tracking':
         return <AdminTracking vehicles={vehicles} onUpdateVehicle={(id, up) => updateRecord('vehicles', id, up, setVehicles)} onBack={() => navigate('operation')} />;
       case 'admin-consolidated-finance':
         return <AdminConsolidatedFinancialReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} tolls={tolls} agregadoFreights={agregadoFreights} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
       case 'admin-fixed-expenses':
-        return <AdminFixedExpenses fixedExpenses={fixedExpenses} onUpdateExpenses={(e) => { setFixedExpenses(e); if(supabase) supabase.from('fixed_expenses').upsert(e as any); }} onBack={() => navigate('operation')} />;
+        return <AdminFixedExpenses fixedExpenses={fixedExpenses} onUpdateExpenses={(e) => { setFixedExpenses(e); if(supabase) supabase.from('fixed_expenses').upsert(e.map(mapToDb) as any); }} onBack={() => navigate('operation')} />;
       case 'admin-activity-report':
         return <AdminActivityReport 
           dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users}
@@ -240,9 +263,13 @@ const App: React.FC = () => {
         </div>
         {currentUser && (
           <div className="flex items-center gap-4">
-            <button onClick={syncWithCloud} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${isSyncing ? 'text-blue-500 animate-pulse' : 'text-slate-500 hover:text-blue-400'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-blue-500' : 'bg-slate-700'}`}></span>
-              {isSyncing ? 'Sincronizando' : 'Nuvem OK'}
+            <button 
+              onClick={syncWithCloud} 
+              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${isSyncing ? 'text-blue-500 animate-pulse' : lastSyncError ? 'text-red-500' : 'text-slate-500 hover:text-blue-400'}`}
+              title={lastSyncError || "Clique para forçar sincronização"}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-blue-500' : lastSyncError ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+              {isSyncing ? 'Sincronizando' : lastSyncError ? 'Erro de Rede' : 'Nuvem OK'}
             </button>
             <div className="hidden md:block text-right">
               <div className="text-xs font-bold text-white uppercase">{currentUser.nome}</div>
