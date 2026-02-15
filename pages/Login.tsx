@@ -102,13 +102,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) 
         </form>
       </Card>
       
-      <div className="mt-8 text-center space-y-4">
-        <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Credenciais Padrão</p>
-          <div className="flex flex-col gap-1">
-             <div className="text-xs text-slate-400">Admin: <span className="text-white font-mono font-bold">Guilherme</span> / <span className="text-white font-mono">prime123</span></div>
-          </div>
-        </div>
+      <div className="mt-12 text-center">
+        <p className="text-[10px] text-slate-700 font-black uppercase tracking-[0.3em]">PRIME GROUP &copy; {new Date().getFullYear()}</p>
       </div>
     </div>
   );

@@ -99,13 +99,13 @@ const OperationHome: React.FC<OperationHomeProps> = ({ user, session, onNavigate
           {user.perfil === UserRole.AJUDANTE && (
             <>
               <SectionHeader title="Minha Operação" />
-              <BigButton onClick={() => onNavigate('route')} icon="📦">Registrar Saída</BigButton>
+              <BigButton onClick={() => onNavigate('helper-binding')} icon="🔗" variant="primary">Vincular a Caminhão</BigButton>
               <SectionHeader title="Histórico" />
               <BigButton onClick={() => onNavigate('my-routes')} icon="📋" variant="secondary">Minhas Saídas</BigButton>
             </>
           )}
 
-          {/* Menu Organizado para Administradores (Total ou Personalizado) */}
+          {/* Menu Organizado para Administradores */}
           {isAnyAdmin && (
             <>
               {/* CATEGORIA 1: CONTROLE CRÍTICO */}

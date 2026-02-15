@@ -101,9 +101,10 @@ export const Select: React.FC<{
   </div>
 );
 
-export const Badge: React.FC<{ children: React.ReactNode; status: string }> = ({ children, status }) => {
+export const Badge: React.FC<{ children: React.ReactNode; status?: string }> = ({ children, status }) => {
   const getColors = () => {
-    switch(status.toLowerCase()) {
+    const s = (status || '').toLowerCase();
+    switch(s) {
       case 'pendente': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
       case 'aprovado': 
       case 'feita': 
@@ -113,7 +114,8 @@ export const Badge: React.FC<{ children: React.ReactNode; status: string }> = ({
       case 'cancelada': return 'bg-red-500/10 text-red-500 border-red-500/20';
       case 'assumida':
       case 'em_rota':
-      case 'rodando': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'rodando':
+      case 'vinculado': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'em_execucao': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
       default: return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
     }
