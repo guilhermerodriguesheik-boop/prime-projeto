@@ -33,6 +33,7 @@ const App: React.FC = () => {
   // Carregar todos os dados da API
   const loadAllData = useCallback(async () => {
     try {
+      console.log('[v0] Starting API load...');
       setSyncStatus('loading');
       const [u, v, c, f, m, r, dr, fe, ag, af, t] = await Promise.all([
         api.getUsers(),
@@ -58,9 +59,10 @@ const App: React.FC = () => {
       setAgregados(ag);
       setAgregadoFreights(af);
       setTolls(t);
+      console.log('[v0] API load success, users:', u.length, 'vehicles:', v.length);
       setSyncStatus('ok');
     } catch (err) {
-      console.error('Failed to load data from API, using fallback:', err);
+      console.log('[v0] API failed, using fallback data:', err);
       // Fallback: usar dados locais quando API nao esta disponivel
       setUsers(INITIAL_USERS as User[]);
       setVehicles(INITIAL_VEHICLES as Vehicle[]);
