@@ -20,34 +20,16 @@ const App: React.FC = () => {
   const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>([]);
   const [routes, setRoutes] = useState<RouteDeparture[]>([]);
   const [dailyRoutes, setDailyRoutes] = useState<DailyRoute[]>([]);
-  const [tolls, setTolls] = useState<Toll[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
-  const [agregados, setAgregados] = useState<Agregado[]>([]);
-
-  // Função para garantir que o banco tenha os dados básicos (Seed automático)
-  const ensureInitialData = async () => {
-    if (!supabase) return;
-    try {
-      const { data: existingUsers } = await supabase.from('users').select('id').limit(1);
-      if (!existingUsers || existingUsers.length === 0) {
-        console.log("Banco vazio detectado. Fazendo upload dos dados iniciais...");
-        await supabase.from('users').insert(INITIAL_USERS.map(mapToDb));
-        await supabase.from('vehicles').insert(INITIAL_VEHICLES.map(mapToDb));
-        await supabase.from('customers').insert(INITIAL_CUSTOMERS.map(mapToDb));
-        console.log("Dados iniciais sincronizados com sucesso!");
-      }
-    } catch (e) {
-      console.error("Erro ao verificar dados iniciais:", e);
-    }
-  };
 
   const syncWithCloud = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      console.warn("Supabase não configurado. Verifique as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.");
+      return;
+    }
     setIsSyncing(true);
     setLastSyncError(null);
     try {
-      await ensureInitialData();
-
       const [
         { data: sUsers, error: errU }, 
         { data: sVehicles, error: errV }, 
@@ -69,19 +51,18 @@ const App: React.FC = () => {
       if (errU) throw new Error(`Erro Usuários: ${errU.message}`);
       if (errV) throw new Error(`Erro Veículos: ${errV.message}`);
 
-      if (sUsers) setUsers(sUsers.map(mapFromDb));
-      if (sVehicles) setVehicles(sVehicles.map(mapFromDb));
-      if (sCustomers) setCustomers(sCustomers.map(mapFromDb));
+      if (sUsers && sUsers.length > 0) setUsers(sUsers.map(mapFromDb));
+      if (sVehicles && sVehicles.length > 0) setVehicles(sVehicles.map(mapFromDb));
+      if (sCustomers && sCustomers.length > 0) setCustomers(sCustomers.map(mapFromDb));
       if (sFuelings) setFuelings(sFuelings.map(mapFromDb));
       if (sMaintenances) setMaintenances(sMaintenances.map(mapFromDb));
       if (sRoutes) setRoutes(sRoutes.map(mapFromDb));
       if (sDailyRoutes) setDailyRoutes(sDailyRoutes.map(mapFromDb));
 
-      console.log("Sincronização Cloud OK");
+      console.log("Sincronização Cloud Concluída");
     } catch (e: any) {
-      console.error("Erro Sincronização:", e);
+      console.error("Falha na Sincronização:", e);
       setLastSyncError(e.message);
-      // Fallback para dados locais se falhar a rede
     } finally {
       setIsSyncing(false);
     }
@@ -93,12 +74,18 @@ const App: React.FC = () => {
     const savedSession = localStorage.getItem('prime_group_session');
     
     if (savedUserId) {
-      const user = users.find(u => u.id === savedUserId);
-      if (user && user.ativo) {
-        setCurrentUser(user);
-        if (savedSession) setSession(JSON.parse(savedSession));
-        setCurrentPage('operation');
-      }
+      // Pequeno delay para garantir que o sync terminou antes de auto-logar
+      setTimeout(() => {
+        setUsers(prevUsers => {
+          const user = prevUsers.find(u => u.id === savedUserId);
+          if (user && user.ativo) {
+            setCurrentUser(user);
+            if (savedSession) setSession(JSON.parse(savedSession));
+            setCurrentPage('operation');
+          }
+          return prevUsers;
+        });
+      }, 500);
     }
   }, [syncWithCloud]);
 
@@ -129,9 +116,10 @@ const App: React.FC = () => {
       const { error } = await supabase.from(table).insert([dbRecord]);
       if (error) {
         alert(`Erro ao salvar na nuvem: ${error.message}`);
+        console.error("Erro Supabase:", error);
       }
     } catch (e: any) {
-      console.error(e);
+      console.error("Exceção ao salvar:", e);
     }
   };
 
@@ -140,7 +128,8 @@ const App: React.FC = () => {
     if (!supabase) return;
     try {
       const dbUpdate = mapToDb(update);
-      await supabase.from(table).update(dbUpdate).eq('id', id);
+      const { error } = await supabase.from(table).update(dbUpdate).eq('id', id);
+      if (error) console.error("Erro ao atualizar:", error.message);
     } catch (e) {
       console.error(e);
     }
