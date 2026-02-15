@@ -27,14 +27,13 @@ const App: React.FC = () => {
     if (!supabase) return;
     setIsSyncing(true);
     setLastSyncError(null);
-    console.log("Iniciando sincronização com Supabase...");
+    console.log("Tentando conectar ao Supabase...");
 
     try {
-      // Fazemos cada busca individualmente para não travar tudo se uma tabela falhar
       const fetchTable = async (table: string) => {
         const { data, error } = await supabase.from(table).select('*');
         if (error) {
-          console.error(`Erro na tabela ${table}:`, error.message);
+          console.error(`Erro na tabela ${table}:`, error);
           return { data: null, error };
         }
         return { data, error: null };
@@ -48,17 +47,24 @@ const App: React.FC = () => {
       const resRoutes = await supabase.from('route_departures').select('*').order('created_at', { ascending: false });
       const resDaily = await supabase.from('daily_routes').select('*').order('created_at', { ascending: false });
 
-      if (resUsers.data) setUsers(resUsers.data.map(mapFromDb));
-      if (resVehicles.data) setVehicles(resVehicles.data.map(mapFromDb));
-      if (resCustomers.data) setCustomers(resCustomers.data.map(mapFromDb));
+      // Só atualiza se houver dados, caso contrário mantém os INITIAL_XXX
+      if (resUsers.data && resUsers.data.length > 0) {
+        setUsers(resUsers.data.map(mapFromDb));
+      } else if (resUsers.error) {
+        setLastSyncError(`Erro Users: ${resUsers.error.message}`);
+      }
+
+      if (resVehicles.data && resVehicles.data.length > 0) setVehicles(resVehicles.data.map(mapFromDb));
+      if (resCustomers.data && resCustomers.data.length > 0) setCustomers(resCustomers.data.map(mapFromDb));
+      
       if (resFuelings.data) setFuelings(resFuelings.data.map(mapFromDb));
       if (resMaintenances.data) setMaintenances(resMaintenances.data.map(mapFromDb));
       if (resRoutes.data) setRoutes(resRoutes.data.map(mapFromDb));
       if (resDaily.data) setDailyRoutes(resDaily.data.map(mapFromDb));
 
-      console.log("Sincronização Cloud Concluída com sucesso.");
+      if (!resUsers.error) console.log("Sincronização Cloud Concluída.");
     } catch (e: any) {
-      console.error("Falha Crítica na Sincronização:", e);
+      console.error("Falha na comunicação com o banco:", e);
       setLastSyncError(e.message);
     } finally {
       setIsSyncing(false);
@@ -110,12 +116,8 @@ const App: React.FC = () => {
     try {
       const dbRecord = mapToDb(record);
       const { error } = await supabase.from(table).insert([dbRecord]);
-      if (error) {
-        alert(`Erro ao salvar na nuvem: ${error.message}`);
-      }
-    } catch (e: any) {
-      console.error(e);
-    }
+      if (error) alert(`Erro ao salvar na nuvem: ${error.message}`);
+    } catch (e: any) { console.error(e); }
   };
 
   const updateRecord = async (table: string, id: string, update: any, setFn: any) => {
@@ -124,13 +126,10 @@ const App: React.FC = () => {
     try {
       const dbUpdate = mapToDb(update);
       const { error } = await supabase.from(table).update(dbUpdate).eq('id', id);
-      if (error) console.error("Erro ao atualizar:", error.message);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  // Lazy components...
+  // Lazy components
   const Login = React.lazy(() => import('./pages/Login'));
   const VehicleSelection = React.lazy(() => import('./pages/VehicleSelection'));
   const OperationHome = React.lazy(() => import('./pages/OperationHome'));
@@ -153,7 +152,17 @@ const App: React.FC = () => {
   const AdminConsolidatedFinancialReport = React.lazy(() => import('./pages/AdminConsolidatedFinancialReport'));
 
   const renderPage = () => {
-    if (!currentUser) return <React.Suspense fallback={null}><Login onLogin={handleLogin} users={users} /></React.Suspense>;
+    if (!currentUser) return (
+      <React.Suspense fallback={null}>
+        <Login 
+          onLogin={handleLogin} 
+          users={users} 
+          syncStatus={isSyncing ? 'syncing' : lastSyncError ? 'error' : 'ok'}
+          syncError={lastSyncError}
+        />
+      </React.Suspense>
+    );
+
     const perf = currentUser.perfil?.toLowerCase();
     const isOp = perf === UserRole.MOTORISTA || perf === UserRole.AJUDANTE;
     const restricted = ['fueling', 'maintenance', 'route', 'daily-route'];

@@ -6,9 +6,11 @@ import { Card, Input, BigButton, Logo } from '../components/UI';
 interface LoginProps {
   onLogin: (user: User) => void;
   users: User[];
+  syncStatus: 'syncing' | 'error' | 'ok';
+  syncError?: string | null;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,13 +21,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
     setError('');
     setIsLoading(true);
 
-    // Pequeno delay para feedback visual
     setTimeout(() => {
-      // Normalização dos inputs (remove espaços extras)
       const inputUser = username.trim().toLowerCase();
       const inputPass = password.trim();
 
-      // Busca robusta
       const user = users.find(u => {
         const uNome = u.nome?.trim().toLowerCase();
         const uEmail = u.email?.trim().toLowerCase();
@@ -40,7 +39,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
         }
       } else {
         setError('Usuário não encontrado ou inativo.');
-        console.log('Tentativa de login falhou. Usuários disponíveis:', users.map(u => u.nome));
       }
       setIsLoading(false);
     }, 600);
@@ -54,6 +52,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
       </div>
 
       <Card className="border-slate-800 shadow-2xl shadow-blue-900/5">
+        <div className="mb-4 flex items-center justify-center gap-2">
+           <span className={`w-2 h-2 rounded-full ${syncStatus === 'syncing' ? 'bg-blue-500 animate-pulse' : syncStatus === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+             {syncStatus === 'syncing' ? 'Sincronizando Banco...' : syncStatus === 'error' ? 'Usando Fallback Local' : 'Nuvem Conectada'}
+           </span>
+        </div>
+
         <form onSubmit={handleLoginAttempt} className="space-y-5">
           <Input 
             label="Usuário ou E-mail" 
@@ -74,9 +79,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
           />
 
           {error && (
-            <div className="bg-red-900/20 border border-red-900/30 p-3 rounded-lg text-red-500 text-[10px] font-black uppercase text-center animate-shake">
+            <div className="bg-red-900/20 border border-red-900/30 p-3 rounded-lg text-red-500 text-[10px] font-black uppercase text-center">
               {error}
             </div>
+          )}
+
+          {syncStatus === 'error' && syncError && (
+             <div className="text-[8px] text-slate-600 text-center italic mt-2">
+               DB Info: {syncError.includes('403') ? 'Erro de Permissão (RLS)' : syncError}
+             </div>
           )}
 
           <div className="pt-2">
@@ -96,13 +107,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Credenciais Padrão</p>
           <div className="flex flex-col gap-1">
              <div className="text-xs text-slate-400">Admin: <span className="text-white font-mono font-bold">Guilherme</span> / <span className="text-white font-mono">prime123</span></div>
-             <div className="text-xs text-slate-400">Motorista: <span className="text-white font-mono font-bold">João Pinheiro</span> / <span className="text-white font-mono">123</span></div>
           </div>
         </div>
-        
-        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
-          PRIME GROUP &copy; {new Date().getFullYear()} - ACESSO RESTRITO
-        </p>
       </div>
     </div>
   );
