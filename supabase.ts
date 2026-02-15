@@ -1,7 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Suas novas credenciais fornecidas
+// Credenciais enviadas pelo usuário
 const supabaseUrl = 'https://sqlrsuqvphcxskiygqfn.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbHJzdXF2cGhjeHNraXlncWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExMjQ1NDIsImV4cCI6MjA4NjcwMDU0Mn0.pTiFiGuoMTwrJgnn4_NC-zLP6HOTuJinxuAdJioLQYc';
 
@@ -47,14 +47,10 @@ const FIELD_MAP: Record<string, string> = {
   finishedAt: 'finished_at'
 };
 
-/**
- * Converte de snake_case (DB) para camelCase (App)
- */
 export const mapFromDb = (item: any) => {
   if (!item) return item;
   const newItem: any = {};
   const inverseMap = Object.fromEntries(Object.entries(FIELD_MAP).map(([k, v]) => [v, k]));
-  
   for (const key in item) {
     const appKey = inverseMap[key] || key;
     newItem[appKey] = item[key];
@@ -62,13 +58,9 @@ export const mapFromDb = (item: any) => {
   return newItem;
 };
 
-/**
- * Converte de camelCase (App) para snake_case (DB)
- */
 export const mapToDb = (item: any) => {
   if (!item) return item;
   const dbItem: any = {};
-  
   for (const key in item) {
     const dbKey = FIELD_MAP[key] || key;
     dbItem[dbKey] = item[key];

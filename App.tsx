@@ -1,4 +1,5 @@
 
+import { createClient } from '@supabase/supabase-js';
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserSession, UserRole, Fueling, MaintenanceRequest, RouteDeparture, Vehicle, DailyRoute, Toll, Customer, FixedExpense, AgregadoFreight, Agregado, FuelingStatus, MaintenanceStatus, RouteStatus, FinanceiroStatus } from './types';
 import { INITIAL_USERS, INITIAL_VEHICLES, INITIAL_CUSTOMERS } from './constants';
@@ -23,45 +24,41 @@ const App: React.FC = () => {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
 
   const syncWithCloud = useCallback(async () => {
-    if (!supabase) {
-      console.warn("Supabase não configurado. Verifique as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.");
-      return;
-    }
+    if (!supabase) return;
     setIsSyncing(true);
     setLastSyncError(null);
+    console.log("Iniciando sincronização com Supabase...");
+
     try {
-      const [
-        { data: sUsers, error: errU }, 
-        { data: sVehicles, error: errV }, 
-        { data: sFuelings, error: errF }, 
-        { data: sMaintenances, error: errM }, 
-        { data: sRoutes, error: errR },
-        { data: sDailyRoutes, error: errD },
-        { data: sCustomers, error: errC }
-      ] = await Promise.all([
-        supabase.from('users').select('*'),
-        supabase.from('vehicles').select('*'),
-        supabase.from('fuelings').select('*').order('created_at', { ascending: false }),
-        supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false }),
-        supabase.from('route_departures').select('*').order('created_at', { ascending: false }),
-        supabase.from('daily_routes').select('*').order('created_at', { ascending: false }),
-        supabase.from('customers').select('*')
-      ]);
+      // Fazemos cada busca individualmente para não travar tudo se uma tabela falhar
+      const fetchTable = async (table: string) => {
+        const { data, error } = await supabase.from(table).select('*');
+        if (error) {
+          console.error(`Erro na tabela ${table}:`, error.message);
+          return { data: null, error };
+        }
+        return { data, error: null };
+      };
 
-      if (errU) throw new Error(`Erro Usuários: ${errU.message}`);
-      if (errV) throw new Error(`Erro Veículos: ${errV.message}`);
+      const resUsers = await fetchTable('users');
+      const resVehicles = await fetchTable('vehicles');
+      const resCustomers = await fetchTable('customers');
+      const resFuelings = await supabase.from('fuelings').select('*').order('created_at', { ascending: false });
+      const resMaintenances = await supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false });
+      const resRoutes = await supabase.from('route_departures').select('*').order('created_at', { ascending: false });
+      const resDaily = await supabase.from('daily_routes').select('*').order('created_at', { ascending: false });
 
-      if (sUsers && sUsers.length > 0) setUsers(sUsers.map(mapFromDb));
-      if (sVehicles && sVehicles.length > 0) setVehicles(sVehicles.map(mapFromDb));
-      if (sCustomers && sCustomers.length > 0) setCustomers(sCustomers.map(mapFromDb));
-      if (sFuelings) setFuelings(sFuelings.map(mapFromDb));
-      if (sMaintenances) setMaintenances(sMaintenances.map(mapFromDb));
-      if (sRoutes) setRoutes(sRoutes.map(mapFromDb));
-      if (sDailyRoutes) setDailyRoutes(sDailyRoutes.map(mapFromDb));
+      if (resUsers.data) setUsers(resUsers.data.map(mapFromDb));
+      if (resVehicles.data) setVehicles(resVehicles.data.map(mapFromDb));
+      if (resCustomers.data) setCustomers(resCustomers.data.map(mapFromDb));
+      if (resFuelings.data) setFuelings(resFuelings.data.map(mapFromDb));
+      if (resMaintenances.data) setMaintenances(resMaintenances.data.map(mapFromDb));
+      if (resRoutes.data) setRoutes(resRoutes.data.map(mapFromDb));
+      if (resDaily.data) setDailyRoutes(resDaily.data.map(mapFromDb));
 
-      console.log("Sincronização Cloud Concluída");
+      console.log("Sincronização Cloud Concluída com sucesso.");
     } catch (e: any) {
-      console.error("Falha na Sincronização:", e);
+      console.error("Falha Crítica na Sincronização:", e);
       setLastSyncError(e.message);
     } finally {
       setIsSyncing(false);
@@ -74,7 +71,6 @@ const App: React.FC = () => {
     const savedSession = localStorage.getItem('prime_group_session');
     
     if (savedUserId) {
-      // Pequeno delay para garantir que o sync terminou antes de auto-logar
       setTimeout(() => {
         setUsers(prevUsers => {
           const user = prevUsers.find(u => u.id === savedUserId);
@@ -85,7 +81,7 @@ const App: React.FC = () => {
           }
           return prevUsers;
         });
-      }, 500);
+      }, 1000);
     }
   }, [syncWithCloud]);
 
@@ -116,10 +112,9 @@ const App: React.FC = () => {
       const { error } = await supabase.from(table).insert([dbRecord]);
       if (error) {
         alert(`Erro ao salvar na nuvem: ${error.message}`);
-        console.error("Erro Supabase:", error);
       }
     } catch (e: any) {
-      console.error("Exceção ao salvar:", e);
+      console.error(e);
     }
   };
 
@@ -135,7 +130,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Import dynamic pages
+  // Lazy components...
   const Login = React.lazy(() => import('./pages/Login'));
   const VehicleSelection = React.lazy(() => import('./pages/VehicleSelection'));
   const OperationHome = React.lazy(() => import('./pages/OperationHome'));
@@ -159,7 +154,6 @@ const App: React.FC = () => {
 
   const renderPage = () => {
     if (!currentUser) return <React.Suspense fallback={null}><Login onLogin={handleLogin} users={users} /></React.Suspense>;
-
     const perf = currentUser.perfil?.toLowerCase();
     const isOp = perf === UserRole.MOTORISTA || perf === UserRole.AJUDANTE;
     const restricted = ['fueling', 'maintenance', 'route', 'daily-route'];
@@ -171,33 +165,27 @@ const App: React.FC = () => {
       }} onBack={() => navigate('operation')} /></React.Suspense>;
     }
 
-    return (
-      <React.Suspense fallback={<div className="flex items-center justify-center p-20 text-slate-500 font-bold animate-pulse">CARREGANDO...</div>}>
-        {(() => {
-          switch (currentPage) {
-            case 'fueling': return <FuelingForm session={session!} user={currentUser} onBack={() => navigate('operation')} onSubmit={(f) => { saveRecord('fuelings', f, setFuelings); navigate('operation'); }} />;
-            case 'maintenance': return <MaintenanceForm session={session!} user={currentUser} onBack={() => navigate('operation')} onSubmit={(m) => { saveRecord('maintenance_requests', m, setMaintenances); navigate('operation'); }} />;
-            case 'route': return <RouteForm session={session!} user={currentUser} drivers={users.filter(u => u.perfil === UserRole.MOTORISTA)} customers={customers} onBack={() => navigate('operation')} onSubmit={(r) => { saveRecord('route_departures', r, setRoutes); navigate('operation'); }} />;
-            case 'daily-route': return <DriverDailyRoute session={session!} user={currentUser} customers={customers} onBack={() => navigate('operation')} onSubmit={(dr) => { saveRecord('daily_routes', dr, setDailyRoutes); navigate('operation'); }} />;
-            case 'my-requests': return <MyRequests fuelings={fuelings.filter(f => f.motoristaId === currentUser.id)} maintenances={maintenances.filter(m => m.motoristaId === currentUser.id)} onBack={() => navigate('operation')} />;
-            case 'my-routes': return <MyRoutes routes={routes.filter(r => r.ajudanteId === currentUser.id)} onBack={() => navigate('operation')} />;
-            case 'admin-dashboard': return <AdminDashboard fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
-            case 'admin-pending': return <AdminPending fuelings={fuelings} maintenances={maintenances} dailyRoutes={dailyRoutes} routes={routes} vehicles={vehicles} users={users} currentUser={currentUser} onUpdateFueling={(id, up) => updateRecord('fuelings', id, up, setFuelings)} onUpdateMaintenance={(id, up) => updateRecord('maintenance_requests', id, up, setMaintenances)} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} onBack={() => navigate('operation')} />;
-            case 'user-mgmt': return <UserManagement users={users} setUsers={(action) => { setUsers((prev) => { const next = typeof action === 'function' ? action(prev) : action; if (supabase) supabase.from('users').upsert(next.map(mapToDb) as any); return next; }); }} onBack={() => navigate('operation')} />;
-            case 'vehicle-mgmt': return <VehicleManagement vehicles={vehicles} setVehicles={(action) => { setVehicles((prev) => { const next = typeof action === 'function' ? action(prev) : action; if (supabase) supabase.from('vehicles').upsert(next.map(mapToDb) as any); return next; }); }} onBack={() => navigate('operation')} />;
-            case 'admin-tracking': return <AdminTracking vehicles={vehicles} onUpdateVehicle={(id, up) => updateRecord('vehicles', id, up, setVehicles)} onBack={() => navigate('operation')} />;
-            case 'admin-consolidated-finance': return <AdminConsolidatedFinancialReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} tolls={[]} agregadoFreights={[]} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
-            case 'admin-fixed-expenses': return <AdminFixedExpenses fixedExpenses={fixedExpenses} onUpdateExpenses={(e) => { setFixedExpenses(e); if(supabase) supabase.from('fixed_expenses').upsert(e.map(mapToDb) as any); }} onBack={() => navigate('operation')} />;
-            case 'admin-activity-report': return <AdminActivityReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} onUpdateFueling={(id, up) => updateRecord('fuelings', id, up, setFuelings)} onUpdateMaintenance={(id, up) => updateRecord('maintenance_requests', id, up, setMaintenances)} onBack={() => navigate('operation')} />;
-            case 'admin-vehicle-report': return <AdminVehicleReport fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} dailyRoutes={dailyRoutes} routes={routes} tolls={[]} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} />;
-            case 'admin-checklists': return <AdminChecklistReport dailyRoutes={dailyRoutes} users={users} vehicles={vehicles} onBack={() => navigate('operation')} />;
-            case 'tech-docs': return <TechnicalDocs onBack={() => navigate('operation')} />;
-            case 'select-vehicle': return <VehicleSelection vehicles={vehicles} onSelect={(vId, pl) => { const s = { userId: currentUser.id, vehicleId: vId, placa: pl, updatedAt: new Date().toISOString() }; setSession(s); localStorage.setItem('prime_group_session', JSON.stringify(s)); navigate('operation'); }} onBack={() => navigate('operation')} />;
-            default: return <OperationHome user={currentUser} session={session} onNavigate={navigate} onLogout={handleLogout} />;
-          }
-        })()}
-      </React.Suspense>
-    );
+    switch (currentPage) {
+      case 'fueling': return <FuelingForm session={session!} user={currentUser} onBack={() => navigate('operation')} onSubmit={(f) => { saveRecord('fuelings', f, setFuelings); navigate('operation'); }} />;
+      case 'maintenance': return <MaintenanceForm session={session!} user={currentUser} onBack={() => navigate('operation')} onSubmit={(m) => { saveRecord('maintenance_requests', m, setMaintenances); navigate('operation'); }} />;
+      case 'route': return <RouteForm session={session!} user={currentUser} drivers={users.filter(u => u.perfil === UserRole.MOTORISTA)} customers={customers} onBack={() => navigate('operation')} onSubmit={(r) => { saveRecord('route_departures', r, setRoutes); navigate('operation'); }} />;
+      case 'daily-route': return <DriverDailyRoute session={session!} user={currentUser} customers={customers} onBack={() => navigate('operation')} onSubmit={(dr) => { saveRecord('daily_routes', dr, setDailyRoutes); navigate('operation'); }} />;
+      case 'my-requests': return <MyRequests fuelings={fuelings.filter(f => f.motoristaId === currentUser.id)} maintenances={maintenances.filter(m => m.motoristaId === currentUser.id)} onBack={() => navigate('operation')} />;
+      case 'my-routes': return <MyRoutes routes={routes.filter(r => r.ajudanteId === currentUser.id)} onBack={() => navigate('operation')} />;
+      case 'admin-dashboard': return <AdminDashboard fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
+      case 'admin-pending': return <AdminPending fuelings={fuelings} maintenances={maintenances} dailyRoutes={dailyRoutes} routes={routes} vehicles={vehicles} users={users} currentUser={currentUser} onUpdateFueling={(id, up) => updateRecord('fuelings', id, up, setFuelings)} onUpdateMaintenance={(id, up) => updateRecord('maintenance_requests', id, up, setMaintenances)} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} onBack={() => navigate('operation')} />;
+      case 'user-mgmt': return <UserManagement users={users} setUsers={(action) => { setUsers((prev) => { const next = typeof action === 'function' ? action(prev) : action; if (supabase) supabase.from('users').upsert(next.map(mapToDb) as any); return next; }); }} onBack={() => navigate('operation')} />;
+      case 'vehicle-mgmt': return <VehicleManagement vehicles={vehicles} setVehicles={(action) => { setVehicles((prev) => { const next = typeof action === 'function' ? action(prev) : action; if (supabase) supabase.from('vehicles').upsert(next.map(mapToDb) as any); return next; }); }} onBack={() => navigate('operation')} />;
+      case 'admin-tracking': return <AdminTracking vehicles={vehicles} onUpdateVehicle={(id, up) => updateRecord('vehicles', id, up, setVehicles)} onBack={() => navigate('operation')} />;
+      case 'admin-consolidated-finance': return <AdminConsolidatedFinancialReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} tolls={[]} agregadoFreights={[]} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
+      case 'admin-fixed-expenses': return <AdminFixedExpenses fixedExpenses={fixedExpenses} onUpdateExpenses={(e) => { setFixedExpenses(e); if(supabase) supabase.from('fixed_expenses').upsert(e.map(mapToDb) as any); }} onBack={() => navigate('operation')} />;
+      case 'admin-activity-report': return <AdminActivityReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} onUpdateFueling={(id, up) => updateRecord('fuelings', id, up, setFuelings)} onUpdateMaintenance={(id, up) => updateRecord('maintenance_requests', id, up, setMaintenances)} onBack={() => navigate('operation')} />;
+      case 'admin-vehicle-report': return <AdminVehicleReport fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} dailyRoutes={dailyRoutes} routes={routes} tolls={[]} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} onUpdateDailyRoute={(id, up) => updateRecord('daily_routes', id, up, setDailyRoutes)} onUpdateRoute={(id, up) => updateRecord('route_departures', id, up, setRoutes)} />;
+      case 'admin-checklists': return <AdminChecklistReport dailyRoutes={dailyRoutes} users={users} vehicles={vehicles} onBack={() => navigate('operation')} />;
+      case 'tech-docs': return <TechnicalDocs onBack={() => navigate('operation')} />;
+      case 'select-vehicle': return <VehicleSelection vehicles={vehicles} onSelect={(vId, pl) => { const s = { userId: currentUser.id, vehicleId: vId, placa: pl, updatedAt: new Date().toISOString() }; setSession(s); localStorage.setItem('prime_group_session', JSON.stringify(s)); navigate('operation'); }} onBack={() => navigate('operation')} />;
+      default: return <OperationHome user={currentUser} session={session} onNavigate={navigate} onLogout={handleLogout} />;
+    }
   };
 
   return (
@@ -225,7 +213,9 @@ const App: React.FC = () => {
         )}
       </header>
       <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
-        {renderPage()}
+        <React.Suspense fallback={<div className="flex items-center justify-center p-20 text-slate-500 font-bold animate-pulse uppercase tracking-[0.3em]">Carregando Sistema...</div>}>
+          {renderPage()}
+        </React.Suspense>
       </main>
     </div>
   );
