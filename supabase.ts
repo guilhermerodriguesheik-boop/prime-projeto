@@ -7,6 +7,12 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const FIELD_MAP: Record<string, string> = {
+  // Coisas de Usuário
+  senha: 'senha',
+  permissoes: 'permissoes',
+  ativo: 'ativo',
+  perfil: 'perfil',
+  // Operacional
   vehicleId: 'vehicle_id',
   motoristaId: 'motorista_id',
   ajudanteId: 'ajudante_id',
