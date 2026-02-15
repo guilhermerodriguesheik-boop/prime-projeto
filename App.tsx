@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('login');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [syncDetails, setSyncDetails] = useState<string>('');
 
   // States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -27,45 +28,36 @@ const App: React.FC = () => {
     if (!supabase) return;
     setIsSyncing(true);
     setLastSyncError(null);
-    console.log("Tentando conectar ao Supabase...");
+    console.log("Sincronizando...");
 
     try {
       const fetchTable = async (table: string) => {
         const { data, error } = await supabase.from(table).select('*');
-        if (error) {
-          console.error(`Erro na tabela ${table}:`, error);
-          return { data: null, error };
-        }
-        return { data, error: null };
+        if (error) throw error;
+        return data || [];
       };
 
-      const resUsers = await fetchTable('users');
-      const resVehicles = await fetchTable('vehicles');
-      const resCustomers = await fetchTable('customers');
-      const resFuelings = await supabase.from('fuelings').select('*').order('created_at', { ascending: false });
-      const resMaintenances = await supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false });
-      const resRoutes = await supabase.from('route_departures').select('*').order('created_at', { ascending: false });
-      const resDaily = await supabase.from('daily_routes').select('*').order('created_at', { ascending: false });
+      const dbUsers = await fetchTable('users');
+      const dbVehicles = await fetchTable('vehicles');
+      const dbCustomers = await fetchTable('customers');
+      const dbFuelings = await fetchTable('fuelings');
+      const dbMaintenances = await fetchTable('maintenance_requests');
+      const dbRoutes = await fetchTable('route_departures');
+      const dbDaily = await fetchTable('daily_routes');
 
-      // Só atualiza se houver dados, caso contrário mantém os INITIAL_XXX
-      if (resUsers.data && resUsers.data.length > 0) {
-        setUsers(resUsers.data.map(mapFromDb));
-      } else if (resUsers.error) {
-        setLastSyncError(`Erro Users: ${resUsers.error.message}`);
-      }
-
-      if (resVehicles.data && resVehicles.data.length > 0) setVehicles(resVehicles.data.map(mapFromDb));
-      if (resCustomers.data && resCustomers.data.length > 0) setCustomers(resCustomers.data.map(mapFromDb));
+      if (dbUsers.length > 0) setUsers(dbUsers.map(mapFromDb));
+      if (dbVehicles.length > 0) setVehicles(dbVehicles.map(mapFromDb));
+      if (dbCustomers.length > 0) setCustomers(dbCustomers.map(mapFromDb));
       
-      if (resFuelings.data) setFuelings(resFuelings.data.map(mapFromDb));
-      if (resMaintenances.data) setMaintenances(resMaintenances.data.map(mapFromDb));
-      if (resRoutes.data) setRoutes(resRoutes.data.map(mapFromDb));
-      if (resDaily.data) setDailyRoutes(resDaily.data.map(mapFromDb));
+      setFuelings(dbFuelings.map(mapFromDb));
+      setMaintenances(dbMaintenances.map(mapFromDb));
+      setRoutes(dbRoutes.map(mapFromDb));
+      setDailyRoutes(dbDaily.map(mapFromDb));
 
-      if (!resUsers.error) console.log("Sincronização Cloud Concluída.");
+      setSyncDetails(`${dbUsers.length} usuários, ${dbVehicles.length} veículos`);
     } catch (e: any) {
-      console.error("Falha na comunicação com o banco:", e);
-      setLastSyncError(e.message);
+      console.error("Erro de sincronização:", e);
+      setLastSyncError(e.message || "Erro desconhecido");
     } finally {
       setIsSyncing(false);
     }
@@ -87,7 +79,7 @@ const App: React.FC = () => {
           }
           return prevUsers;
         });
-      }, 1000);
+      }, 800);
     }
   }, [syncWithCloud]);
 
@@ -111,13 +103,22 @@ const App: React.FC = () => {
   };
 
   const saveRecord = async (table: string, record: any, setFn: any) => {
+    // Adiciona localmente primeiro
     setFn((prev: any[]) => [record, ...prev]);
+    
     if (!supabase) return;
     try {
       const dbRecord = mapToDb(record);
       const { error } = await supabase.from(table).insert([dbRecord]);
-      if (error) alert(`Erro ao salvar na nuvem: ${error.message}`);
-    } catch (e: any) { console.error(e); }
+      if (error) {
+        alert(`Erro na Nuvem: ${error.message}`);
+        console.error("Erro insert:", error);
+      } else {
+        console.log(`Sucesso ao salvar em ${table}`);
+      }
+    } catch (e: any) {
+      console.error("Exceção ao salvar:", e);
+    }
   };
 
   const updateRecord = async (table: string, id: string, update: any, setFn: any) => {
@@ -126,7 +127,10 @@ const App: React.FC = () => {
     try {
       const dbUpdate = mapToDb(update);
       const { error } = await supabase.from(table).update(dbUpdate).eq('id', id);
-    } catch (e) { console.error(e); }
+      if (error) console.error("Erro update:", error.message);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Lazy components
@@ -205,13 +209,20 @@ const App: React.FC = () => {
         </div>
         {currentUser && (
           <div className="flex items-center gap-4">
+            <div className="hidden lg:flex flex-col items-end mr-2">
+               <span className={`text-[8px] font-black uppercase tracking-widest ${lastSyncError ? 'text-red-500' : 'text-emerald-500'}`}>
+                 {isSyncing ? 'Sincronizando...' : lastSyncError ? 'Erro de Sync' : 'Dados Sincronizados'}
+               </span>
+               <span className="text-[7px] text-slate-500 uppercase">{syncDetails}</span>
+            </div>
             <button 
               onClick={syncWithCloud} 
-              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${isSyncing ? 'text-blue-500 animate-pulse' : lastSyncError ? 'text-red-500' : 'text-emerald-500'}`}
-              title={lastSyncError || "Clique para forçar sincronização"}
+              className={`p-2 rounded-full transition-all ${isSyncing ? 'bg-blue-600 animate-spin' : 'hover:bg-slate-800'}`}
+              title="Sincronizar agora"
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-blue-500' : lastSyncError ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-              {isSyncing ? 'Sincronizando' : lastSyncError ? 'Erro DB' : 'Nuvem OK'}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
             </button>
             <div className="hidden md:block text-right">
               <div className="text-xs font-bold text-white uppercase">{currentUser.nome}</div>
