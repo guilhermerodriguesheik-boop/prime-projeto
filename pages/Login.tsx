@@ -6,11 +6,11 @@ import { Card, Input, BigButton, Logo } from '../components/UI';
 interface LoginProps {
   onLogin: (user: User) => void;
   users: User[];
-  syncStatus: 'syncing' | 'error' | 'ok';
+  syncStatus: string;
   syncError?: string | null;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -41,7 +41,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) 
         setError('Usuário não encontrado ou inativo.');
       }
       setIsLoading(false);
-    }, 600);
+    }, 400);
   };
 
   return (
@@ -52,13 +52,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) 
       </div>
 
       <Card className="border-slate-800 shadow-2xl shadow-blue-900/5">
-        <div className="mb-4 flex items-center justify-center gap-2">
-           <span className={`w-2 h-2 rounded-full ${syncStatus === 'syncing' ? 'bg-blue-500 animate-pulse' : syncStatus === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-             {syncStatus === 'syncing' ? 'Sincronizando Banco...' : syncStatus === 'error' ? 'Usando Fallback Local' : 'Nuvem Conectada'}
-           </span>
-        </div>
-
         <form onSubmit={handleLoginAttempt} className="space-y-5">
           <Input 
             label="Usuário ou E-mail" 
@@ -82,12 +75,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, users, syncStatus, syncError }) 
             <div className="bg-red-900/20 border border-red-900/30 p-3 rounded-lg text-red-500 text-[10px] font-black uppercase text-center">
               {error}
             </div>
-          )}
-
-          {syncStatus === 'error' && syncError && (
-             <div className="text-[8px] text-slate-600 text-center italic mt-2">
-               DB Info: {syncError.includes('403') ? 'Erro de Permissão (RLS)' : syncError}
-             </div>
           )}
 
           <div className="pt-2">

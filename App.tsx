@@ -14,75 +14,78 @@ const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('login');
 
-  // Recuperação de dados do LocalStorage ou Constants
+  // Estados dos Dados com Inicialização do LocalStorage
   const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('prime_users');
+    const saved = localStorage.getItem('pg_users');
     return saved ? JSON.parse(saved) : INITIAL_USERS;
   });
 
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
-    const saved = localStorage.getItem('prime_vehicles');
+    const saved = localStorage.getItem('pg_vehicles');
     return saved ? JSON.parse(saved) : INITIAL_VEHICLES;
   });
 
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('prime_customers');
+    const saved = localStorage.getItem('pg_customers');
     return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
   });
 
   const [fuelings, setFuelings] = useState<Fueling[]>(() => {
-    const saved = localStorage.getItem('prime_fuelings');
+    const saved = localStorage.getItem('pg_fuelings');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [maintenances, setMaintenances] = useState<MaintenanceRequest[]>(() => {
-    const saved = localStorage.getItem('prime_maintenances');
+    const saved = localStorage.getItem('pg_maintenances');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [routes, setRoutes] = useState<RouteDeparture[]>(() => {
-    const saved = localStorage.getItem('prime_routes');
+    const saved = localStorage.getItem('pg_routes');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [dailyRoutes, setDailyRoutes] = useState<DailyRoute[]>(() => {
-    const saved = localStorage.getItem('prime_daily_routes');
+    const saved = localStorage.getItem('pg_daily_routes');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() => {
-    const saved = localStorage.getItem('prime_fixed_expenses');
+    const saved = localStorage.getItem('pg_fixed_expenses');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [agregados, setAgregados] = useState<Agregado[]>(() => {
-    const saved = localStorage.getItem('prime_agregados');
+    const saved = localStorage.getItem('pg_agregados');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [agregadoFreights, setAgregadoFreights] = useState<AgregadoFreight[]>(() => {
-    const saved = localStorage.getItem('prime_agregado_freights');
+    const saved = localStorage.getItem('pg_agregado_freights');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [tolls, setTolls] = useState<Toll[]>(() => {
-    const saved = localStorage.getItem('prime_tolls');
+    const saved = localStorage.getItem('pg_tolls');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Persistência Automática
-  useEffect(() => { localStorage.setItem('prime_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('prime_vehicles', JSON.stringify(vehicles)); }, [vehicles]);
-  useEffect(() => { localStorage.setItem('prime_customers', JSON.stringify(customers)); }, [customers]);
-  useEffect(() => { localStorage.setItem('prime_fuelings', JSON.stringify(fuelings)); }, [fuelings]);
-  useEffect(() => { localStorage.setItem('prime_maintenances', JSON.stringify(maintenances)); }, [maintenances]);
-  useEffect(() => { localStorage.setItem('prime_routes', JSON.stringify(routes)); }, [routes]);
-  useEffect(() => { localStorage.setItem('prime_daily_routes', JSON.stringify(dailyRoutes)); }, [dailyRoutes]);
-  useEffect(() => { localStorage.setItem('prime_fixed_expenses', JSON.stringify(fixedExpenses)); }, [fixedExpenses]);
-  useEffect(() => { localStorage.setItem('prime_agregados', JSON.stringify(agregados)); }, [agregados]);
-  useEffect(() => { localStorage.setItem('prime_agregado_freights', JSON.stringify(agregadoFreights)); }, [agregadoFreights]);
-  useEffect(() => { localStorage.setItem('prime_tolls', JSON.stringify(tolls)); }, [tolls]);
+  // Efeito de Persistência (Salva no LocalStorage sempre que algo muda)
+  useEffect(() => {
+    localStorage.setItem('pg_users', JSON.stringify(users));
+    localStorage.setItem('pg_vehicles', JSON.stringify(vehicles));
+    localStorage.setItem('pg_customers', JSON.stringify(customers));
+    localStorage.setItem('pg_fuelings', JSON.stringify(fuelings));
+    localStorage.setItem('pg_maintenances', JSON.stringify(maintenances));
+    localStorage.setItem('pg_routes', JSON.stringify(routes));
+    localStorage.setItem('pg_daily_routes', JSON.stringify(dailyRoutes));
+    localStorage.setItem('pg_fixed_expenses', JSON.stringify(fixedExpenses));
+    localStorage.setItem('pg_agregados', JSON.stringify(agregados));
+    localStorage.setItem('pg_agregado_freights', JSON.stringify(agregadoFreights));
+    localStorage.setItem('pg_tolls', JSON.stringify(tolls));
+  }, [users, vehicles, customers, fuelings, maintenances, routes, dailyRoutes, fixedExpenses, agregados, agregadoFreights, tolls]);
 
+  // Login Persistente
   useEffect(() => {
     const savedUserId = localStorage.getItem('prime_group_user_id');
     const savedSession = localStorage.getItem('prime_group_session');
@@ -115,10 +118,22 @@ const App: React.FC = () => {
     navigate('login');
   };
 
-  // Funções de Registro
-  const saveRecord = (setFn: any, record: any) => setFn((prev: any) => [record, ...prev]);
-  const updateRecord = (setFn: any, id: string, update: any) => 
+  const saveRecord = (setFn: any, record: any) => {
+    setFn((prev: any) => [record, ...prev]);
+  };
+
+  const updateRecord = (setFn: any, id: string, update: any) => {
     setFn((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...update } : i));
+  };
+
+  const onSaveUser = async (u: User) => {
+    const exists = users.find(x => x.id === u.id);
+    setUsers(prev => exists ? prev.map(x => x.id === u.id ? u : x) : [u, ...prev]);
+  };
+
+  const onSaveVehicle = async (v: Vehicle) => {
+    setVehicles(prev => [...prev, v]);
+  };
 
   // Lazy Pages
   const Login = React.lazy(() => import('./pages/Login'));
@@ -174,8 +189,8 @@ const App: React.FC = () => {
       // Admin
       case 'admin-dashboard': return <AdminDashboard fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
       case 'admin-pending': return <AdminPending fuelings={fuelings} maintenances={maintenances} dailyRoutes={dailyRoutes} routes={routes} vehicles={vehicles} users={users} currentUser={currentUser} onUpdateFueling={(id, up) => updateRecord(setFuelings, id, up)} onUpdateMaintenance={(id, up) => updateRecord(setMaintenances, id, up)} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up)} onBack={() => navigate('operation')} />;
-      case 'user-mgmt': return <UserManagement users={users} onSaveUser={async (u) => setUsers(prev => prev.find(x => x.id === u.id) ? prev.map(x => x.id === u.id ? u : x) : [u, ...prev])} onBack={() => navigate('operation')} />;
-      case 'vehicle-mgmt': return <VehicleManagement vehicles={vehicles} onSaveVehicle={async (v) => setVehicles(prev => [...prev, v])} onBack={() => navigate('operation')} />;
+      case 'user-mgmt': return <UserManagement users={users} onSaveUser={onSaveUser} onBack={() => navigate('operation')} />;
+      case 'vehicle-mgmt': return <VehicleManagement vehicles={vehicles} onSaveVehicle={onSaveVehicle} onBack={() => navigate('operation')} />;
       case 'admin-customers': return <AdminCustomerManagement customers={customers} setCustomers={setCustomers} onBack={() => navigate('operation')} />;
       case 'admin-agregado-mgmt': return <AdminAgregadoManagement agregados={agregados} onUpdateAgregados={setAgregados} onBack={() => navigate('operation')} />;
       case 'admin-agregado-freight': return <AdminAgregadoFreight agregados={agregados} onSubmit={(f) => saveRecord(setAgregadoFreights, f)} onBack={() => navigate('operation')} />;
@@ -200,6 +215,10 @@ const App: React.FC = () => {
       <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('operation')}>
           <Logo size="sm" showText={true} />
+          <div className="flex items-center gap-1.5 ml-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Local Mode</span>
+          </div>
         </div>
         {currentUser && (
           <div className="flex items-center gap-4">
@@ -212,7 +231,7 @@ const App: React.FC = () => {
         )}
       </header>
       <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
-        <React.Suspense fallback={<div className="p-20 text-center font-bold animate-pulse text-slate-700 uppercase tracking-widest">Carregando...</div>}>
+        <React.Suspense fallback={<div className="p-20 text-center font-bold animate-pulse text-slate-700 uppercase tracking-widest">Iniciando Sistemas...</div>}>
           {renderPage()}
         </React.Suspense>
       </main>

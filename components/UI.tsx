@@ -101,9 +101,10 @@ export const Select: React.FC<{
   </div>
 );
 
-export const Badge: React.FC<{ children: React.ReactNode; status?: string }> = ({ children, status }) => {
+export const Badge: React.FC<{ children: React.ReactNode; status?: any }> = ({ children, status }) => {
   const getColors = () => {
-    const s = (status || '').toLowerCase();
+    // Garantia de que status seja tratado como string segura
+    const s = String(status || '').toLowerCase();
     switch(s) {
       case 'pendente': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
       case 'aprovado': 
