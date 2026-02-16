@@ -33,7 +33,6 @@ const App: React.FC = () => {
   // Carregar todos os dados da API
   const loadAllData = useCallback(async () => {
     try {
-      console.log('[v0] Starting API load...');
       setSyncStatus('loading');
       const [u, v, c, f, m, r, dr, fe, ag, af, t] = await Promise.all([
         api.getUsers(),
@@ -59,11 +58,8 @@ const App: React.FC = () => {
       setAgregados(ag);
       setAgregadoFreights(af);
       setTolls(t);
-      console.log('[v0] API load success, users:', u.length, 'vehicles:', v.length, 'fuelings:', f.length, 'maintenances:', m.length);
-      console.log('[v0] First user id:', u[0]?.id, 'First vehicle id:', v[0]?.id);
       setSyncStatus('ok');
     } catch (err) {
-      console.log('[v0] API FAILED, using fallback data. Error:', String(err));
       // Fallback: usar dados locais quando API nao esta disponivel
       setUsers(INITIAL_USERS as User[]);
       setVehicles(INITIAL_VEHICLES as Vehicle[]);
@@ -72,13 +68,50 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Carregar dados e restaurar sessao ao iniciar
+  // Carregar dados ao iniciar
   useEffect(() => {
     (async () => {
       await loadAllData();
       setLoading(false);
     })();
   }, [loadAllData]);
+
+  // Polling: recarregar dados a cada 15 segundos para sincronizar entre aparelhos
+  useEffect(() => {
+    if (loading) return;
+    const interval = setInterval(async () => {
+      try {
+        const [f, m, r, dr, u, v, c, ag, af, fe, t] = await Promise.all([
+          api.getFuelings(),
+          api.getMaintenances(),
+          api.getRoutes(),
+          api.getDailyRoutes(),
+          api.getUsers(),
+          api.getVehicles(),
+          api.getCustomers(),
+          api.getAgregados(),
+          api.getAgregadoFreights(),
+          api.getFixedExpenses(),
+          api.getTolls(),
+        ]);
+        setFuelings(f);
+        setMaintenances(m);
+        setRoutes(r);
+        setDailyRoutes(dr);
+        setUsers(u);
+        setVehicles(v);
+        setCustomers(c);
+        setAgregados(ag);
+        setAgregadoFreights(af);
+        setFixedExpenses(fe);
+        setTolls(t);
+        setSyncStatus('ok');
+      } catch {
+        // Falha silenciosa no polling - nao muda status
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Restaurar sessao do usuario apos carregar dados
   useEffect(() => {
@@ -116,21 +149,15 @@ const App: React.FC = () => {
 
   // Salvar novo registro: atualiza estado local + envia para API
   const saveRecord = (setFn: any, record: any, apiCall: (r: any) => Promise<any>) => {
-    console.log('[v0] saveRecord called:', JSON.stringify(record).slice(0, 200));
     setFn((prev: any) => [record, ...prev]);
-    apiCall(record)
-      .then(res => console.log('[v0] saveRecord API success:', res))
-      .catch(err => console.error('[v0] saveRecord API error:', err));
+    apiCall(record).catch(err => console.error('[v0] saveRecord API error:', err));
   };
 
   // Atualizar registro existente: atualiza estado local + envia para API
   const updateRecord = (setFn: any, id: string, update: any, apiCall?: (id: string, u: any) => Promise<any>) => {
-    console.log('[v0] updateRecord called:', id, JSON.stringify(update).slice(0, 200));
     setFn((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...update } : i));
     if (apiCall) {
-      apiCall(id, update)
-        .then(res => console.log('[v0] updateRecord API success:', res))
-        .catch(err => console.error('[v0] updateRecord API error:', err));
+      apiCall(id, update).catch(err => console.error('[v0] updateRecord API error:', err));
     }
   };
 
