@@ -51,21 +51,21 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
         type: 'Receita',
         category: 'Rota do Dia',
         description: `${dr.placa} - ${dr.clienteNome} (${dr.oc})`,
-        value: dr.valorFrete || 0
+        value: Number(dr.valorFrete || 0)
       })),
       ...routes.filter(r => filterByDate(r.createdAt)).map(r => ({
         date: r.createdAt,
         type: 'Receita',
         category: 'Saída OC',
         description: `${r.placa} - ${r.clienteNome} (${r.oc})`,
-        value: r.valorFrete || 0
+        value: Number(r.valorFrete || 0)
       })),
       ...agregadoFreights.filter(af => filterByDate(af.data)).map(af => ({
         date: af.data,
         type: 'Receita',
         category: 'Frete Agregado',
         description: `AGREGADO: ${af.nomeAgregado} (${af.placa}) - OC: ${af.oc}`,
-        value: af.valorFrete || 0
+        value: Number(af.valorFrete || 0)
       }))
     ];
 
@@ -73,14 +73,14 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
     const expenseEntries = [
       ...dailyRoutes.filter(dr => filterByDate(dr.createdAt)).flatMap(dr => {
         const items = [];
-        if (dr.valorMotorista) items.push({ date: dr.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Motorista (${dr.placa})`, value: dr.valorMotorista });
-        if (dr.valorAjudante) items.push({ date: dr.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Ajudante (${dr.placa})`, value: dr.valorAjudante });
+        if (dr.valorMotorista) items.push({ date: dr.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Motorista (${dr.placa})`, value: Number(dr.valorMotorista) });
+        if (dr.valorAjudante) items.push({ date: dr.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Ajudante (${dr.placa})`, value: Number(dr.valorAjudante) });
         return items;
       }),
       ...routes.filter(r => filterByDate(r.createdAt)).flatMap(r => {
         const items = [];
-        if (r.valorMotorista) items.push({ date: r.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Motorista (${r.placa})`, value: r.valorMotorista });
-        if (r.valorAjudante) items.push({ date: r.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Ajudante (${r.placa})`, value: r.valorAjudante });
+        if (r.valorMotorista) items.push({ date: r.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Motorista (${r.placa})`, value: Number(r.valorMotorista) });
+        if (r.valorAjudante) items.push({ date: r.createdAt, type: 'Despesa', category: 'Equipe', description: `Pagto Ajudante (${r.placa})`, value: Number(r.valorAjudante) });
         return items;
       }),
       ...agregadoFreights.filter(af => filterByDate(af.data)).map(af => ({
@@ -88,28 +88,28 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
         type: 'Despesa',
         category: 'Pagto Agregado',
         description: `PAGO AO AGREGADO: ${af.nomeAgregado} (${af.placa})`,
-        value: af.valorAgregado || 0
+        value: Number(af.valorAgregado || 0)
       })),
       ...fuelings.filter(f => f.status === FuelingStatus.APROVADO && filterByDate(f.createdAt)).map(f => ({
         date: f.createdAt,
         type: 'Despesa',
         category: 'Combustível',
         description: `Abastecimento Placa: ${f.placa}`,
-        value: f.valor || 0
+        value: Number(f.valor || 0)
       })),
       ...maintenances.filter(m => m.status === MaintenanceStatus.FEITA && filterByDate(m.createdAt)).map(m => ({
         date: m.doneAt || m.createdAt,
         type: 'Despesa',
         category: 'Manutenção',
         description: `Manutenção Placa: ${m.placa} (${m.oficina})`,
-        value: m.valor || 0
+        value: Number(m.valor || 0)
       })),
       ...tolls.filter(t => filterByDate(t.data)).map(t => ({
         date: t.data,
         type: 'Despesa',
         category: 'Pedágio',
         description: `Pedágio Placa: ${t.placa}`,
-        value: t.valor || 0
+        value: Number(t.valor || 0)
       })),
       ...fixedExpenses.filter(fe => {
         if (!start || !end) return true;
@@ -120,24 +120,24 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
         type: 'Despesa',
         category: 'Fixo',
         description: `CUSTO FIXO: ${fe.descricao} (${fe.categoria})`,
-        value: fe.valor || 0
+        value: Number(fe.valor || 0)
       }))
     ];
 
     const allEntries = [...revenueEntries, ...expenseEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Explicitly define the initial value of reduce with type assertions to assist inference.
     const summary = allEntries.reduce((acc, curr) => {
+      const val = Number(curr.value || 0);
       if (curr.type === 'Receita') {
-        acc.totalRevenue += curr.value;
+        acc.totalRevenue += val;
       } else {
-        acc.totalExpense += curr.value;
-        acc.expenseByCategory[curr.category] = (acc.expenseByCategory[curr.category] || 0) + curr.value;
+        acc.totalExpense += val;
+        acc.expenseByCategory[curr.category] = (acc.expenseByCategory[curr.category] || 0) + val;
       }
       return acc;
     }, { 
-      totalRevenue: 0 as number, 
-      totalExpense: 0 as number, 
+      totalRevenue: 0, 
+      totalExpense: 0, 
       expenseByCategory: {} as Record<string, number> 
     });
 
@@ -151,13 +151,12 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
 
   const chartExpenseBreakdown = Object.entries(filteredData.expenseByCategory).map(([name, value]) => ({
     name,
-    value
-  })).sort((a, b) => (b.value as number) - (a.value as number));
+    value: Number(value)
+  })).sort((a, b) => b.value - a.value);
 
   const PIE_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#eab308'];
 
-  // Fix: Explicitly treat totalRevenue and totalExpense as numbers to resolve arithmetic operation errors.
-  const lucroLiquido = (filteredData.totalRevenue as number) - (filteredData.totalExpense as number);
+  const lucroLiquido = Number(filteredData.totalRevenue) - Number(filteredData.totalExpense);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -186,17 +185,17 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-slate-900/50 border-emerald-900/40 text-center">
           <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Faturamento Total</div>
-          <div className="text-3xl font-black text-emerald-400">R$ {filteredData.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="text-3xl font-black text-emerald-400">R$ {Number(filteredData.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="bg-slate-900/50 border-red-900/40 text-center">
           <div className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Despesas Gerais</div>
-          <div className="text-3xl font-black text-red-400">R$ {filteredData.totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="text-3xl font-black text-red-400">R$ {Number(filteredData.totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className={`${lucroLiquido >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/20 border-red-900/50'} text-center shadow-2xl`}>
           <div className={`text-[10px] font-black ${lucroLiquido >= 0 ? 'text-emerald-500' : 'text-red-500'} uppercase tracking-widest mb-1`}>Lucro Líquido Real</div>
           <div className={`text-4xl font-black ${lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <div className="text-[10px] font-bold text-slate-500 mt-2">
-            Margem Líquida: {(filteredData.totalRevenue as number) > 0 ? (((lucroLiquido as number) / (filteredData.totalRevenue as number)) * 100).toFixed(2) : 0}%
+            Margem Líquida: {Number(filteredData.totalRevenue) > 0 ? ((lucroLiquido / Number(filteredData.totalRevenue)) * 100).toFixed(2) : 0}%
           </div>
         </Card>
       </div>
@@ -215,7 +214,7 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
               <Tooltip 
                 cursor={{fill: '#1e293b'}}
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                formatter={(value: number) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               />
               <Bar dataKey="valor" radius={[0, 4, 4, 0]} barSize={40}>
                 {chartComparisonData.map((entry, index) => (
@@ -248,7 +247,7 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
                   </Pie>
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                    formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    formatter={(value: number) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -261,7 +260,7 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
                     <span className="text-slate-400 font-bold uppercase">{item.name}</span>
                   </div>
                   <span className="text-slate-200 font-mono">
-                    {(((item.value as number) / (filteredData.totalExpense as number)) * 100).toFixed(1)}%
+                    {Number(filteredData.totalExpense) > 0 ? ((Number(item.value) / Number(filteredData.totalExpense)) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
               ))}
@@ -302,7 +301,7 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
                     {entry.description}
                   </td>
                   <td className={`p-4 text-right text-sm font-black ${entry.type === 'Receita' ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {entry.type === 'Receita' ? '+' : '-'} {entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {entry.type === 'Receita' ? '+' : '-'} {Number(entry.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
               ))}
@@ -317,11 +316,11 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
             <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-800">
               <tr className="bg-slate-950">
                 <td colSpan={4} className="p-4 text-[10px] uppercase text-slate-500">TOTAL DE RECEITAS</td>
-                <td className="p-4 text-right text-emerald-400 font-black">R$ {filteredData.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-right text-emerald-400 font-black">R$ {Number(filteredData.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
               </tr>
               <tr className="bg-slate-950">
                 <td colSpan={4} className="p-4 text-[10px] uppercase text-slate-500">TOTAL DE DESPESAS</td>
-                <td className="p-4 text-right text-red-400 font-black">R$ {filteredData.totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-right text-red-400 font-black">R$ {Number(filteredData.totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
               </tr>
               <tr className="bg-slate-900 border-t border-slate-700">
                 <td colSpan={4} className="p-4 text-xs uppercase text-white font-black">LUCRO LÍQUIDO CONSOLIDADO</td>

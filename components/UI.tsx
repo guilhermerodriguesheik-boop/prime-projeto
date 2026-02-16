@@ -34,24 +34,31 @@ export const Card: React.FC<{ children: React.ReactNode; className?: string }> =
 export const BigButton: React.FC<{ 
   onClick: () => void; 
   children: React.ReactNode; 
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'indigo';
   icon?: React.ReactNode;
   disabled?: boolean;
-}> = ({ onClick, children, variant = 'primary', icon, disabled }) => {
+  notificationCount?: number;
+}> = ({ onClick, children, variant = 'primary', icon, disabled, notificationCount }) => {
   const styles = {
     primary: 'bg-blue-700 hover:bg-blue-600 border-blue-600 text-white shadow-blue-900/20',
     secondary: 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-100',
     danger: 'bg-red-700 hover:bg-red-600 border-red-600 text-white',
-    success: 'bg-emerald-700 hover:bg-emerald-600 border-emerald-600 text-white'
+    success: 'bg-emerald-700 hover:bg-emerald-600 border-emerald-600 text-white',
+    indigo: 'bg-indigo-700 hover:bg-indigo-600 border-indigo-600 text-white'
   };
 
   return (
     <button 
       onClick={onClick}
       disabled={disabled}
-      className={`w-full p-6 text-xl font-bold rounded-2xl border-b-4 flex flex-col items-center justify-center gap-3 transition-all active:translate-y-1 active:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]}`}
+      className={`relative w-full p-6 text-sm font-black uppercase tracking-widest rounded-2xl border-b-4 flex flex-col items-center justify-center gap-4 transition-all active:translate-y-1 active:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]}`}
     >
-      {icon && <div className="text-3xl">{icon}</div>}
+      {notificationCount ? (
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-6 h-6 flex items-center justify-center rounded-full border-2 border-slate-950 font-black animate-bounce">
+          {notificationCount}
+        </span>
+      ) : null}
+      {icon && <div className="text-white opacity-80">{icon}</div>}
       {children}
     </button>
   );
@@ -66,14 +73,14 @@ export const Input: React.FC<{
   placeholder?: string;
 }> = ({ label, type = 'text', value, onChange, required, placeholder }) => (
   <div className="mb-4">
-    <label className="block text-slate-400 text-sm font-medium mb-1.5 uppercase tracking-wider">{label}</label>
+    <label className="block text-slate-400 text-[10px] font-black mb-1.5 uppercase tracking-wider">{label}</label>
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
       placeholder={placeholder}
-      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-700"
+      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-700 text-sm"
     />
   </div>
 );
@@ -86,12 +93,12 @@ export const Select: React.FC<{
   required?: boolean;
 }> = ({ label, value, options, onChange, required }) => (
   <div className="mb-4">
-    <label className="block text-slate-400 text-sm font-medium mb-1.5 uppercase tracking-wider">{label}</label>
+    <label className="block text-slate-400 text-[10px] font-black mb-1.5 uppercase tracking-wider">{label}</label>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
-      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none"
+      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none text-sm"
     >
       <option value="">Selecione...</option>
       {options.map((opt) => (
@@ -103,7 +110,6 @@ export const Select: React.FC<{
 
 export const Badge: React.FC<{ children: React.ReactNode; status?: any }> = ({ children, status }) => {
   const getColors = () => {
-    // Garantia de que status seja tratado como string segura
     const s = String(status || '').toLowerCase();
     switch(s) {
       case 'pendente': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
@@ -123,8 +129,35 @@ export const Badge: React.FC<{ children: React.ReactNode; status?: any }> = ({ c
   };
   
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border uppercase tracking-widest ${getColors()}`}>
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-widest ${getColors()}`}>
       {children}
     </span>
+  );
+};
+
+export const Modal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}> = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl animate-slideDown">
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+          <h3 className="text-lg font-black uppercase tracking-widest text-white">{title}</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 };

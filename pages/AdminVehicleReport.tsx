@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Fueling, MaintenanceRequest, Vehicle, FuelingStatus, DailyRoute, RouteDeparture, MaintenanceStatus, Toll, FixedExpense } from '../types';
 import { Card, Badge, Input, Select } from '../components/UI';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie, ComposedChart, Line } from 'recharts';
 
 interface AdminVehicleReportProps {
   fuelings: Fueling[];
@@ -59,12 +59,15 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
       const vRoutes = r.filter(route => route.vehicleId === v.id);
       const vTolls = t.filter(toll => toll.vehicleId === v.id);
       
-      const gastoCombustivel = vFuelings.reduce((sum, fuel) => sum + fuel.valor, 0);
-      const gastoManutencao = vMaintenances.reduce((sum, maint) => sum + (maint.valor || 0), 0);
-      const gastoPedagio = vTolls.reduce((sum, toll) => sum + toll.valor, 0);
-      const gastoEquipe = [...vDailyRoutes, ...vRoutes].reduce((sum, op) => sum + (op.valorMotorista || 0) + (op.valorAjudante || 0), 0);
+      const gastoCombustivel = vFuelings.reduce((sum, fuel) => sum + Number(fuel.valor || 0), 0);
+      const gastoManutencao = vMaintenances.reduce((sum, maint) => sum + Number(maint.valor || 0), 0);
+      const gastoPedagio = vTolls.reduce((sum, toll) => sum + Number(toll.valor || 0), 0);
+      const gastoEquipe = [
+        ...vDailyRoutes.map(op => Number(op.valorMotorista || 0) + Number(op.valorAjudante || 0)),
+        ...vRoutes.map(op => Number(op.valorMotorista || 0) + Number(op.valorAjudante || 0))
+      ].reduce((sum, val) => sum + val, 0);
       
-      const totalFrete = [...vDailyRoutes, ...vRoutes].reduce((sum, op) => sum + (op.valorFrete || 0), 0);
+      const totalFrete = [...vDailyRoutes, ...vRoutes].reduce((sum, op) => sum + Number(op.valorFrete || 0), 0);
       const totalCustos = gastoCombustivel + gastoManutencao + gastoPedagio + gastoEquipe;
       const lucroOp = totalFrete - totalCustos;
 
@@ -92,22 +95,22 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
   const individualBreakdownData = useMemo(() => {
     if (!selectedVehicleStats) return [];
     return [
-      { name: 'Combustível', value: selectedVehicleStats.gastoCombustivel, color: '#3b82f6' },
-      { name: 'Manutenção', value: selectedVehicleStats.gastoManutencao, color: '#f59e0b' },
-      { name: 'Pedágio', value: selectedVehicleStats.gastoPedagio, color: '#8b5cf6' },
-      { name: 'Equipe', value: selectedVehicleStats.gastoEquipe, color: '#ec4899' },
+      { name: 'Combustível', value: Number(selectedVehicleStats.gastoCombustivel), color: '#3b82f6' },
+      { name: 'Manutenção', value: Number(selectedVehicleStats.gastoManutencao), color: '#f59e0b' },
+      { name: 'Pedágio', value: Number(selectedVehicleStats.gastoPedagio), color: '#8b5cf6' },
+      { name: 'Equipe', value: Number(selectedVehicleStats.gastoEquipe), color: '#ec4899' },
     ].filter(item => item.value > 0);
   }, [selectedVehicleStats]);
 
   const totalDespesasFixas = useMemo(() => {
-    return dateFilteredData.fe.reduce((sum, e) => sum + e.valor, 0);
+    return dateFilteredData.fe.reduce((sum, e) => sum + Number(e.valor || 0), 0);
   }, [dateFilteredData]);
 
   const totals = useMemo(() => {
     const sumOp = vehicleStats.reduce((acc, curr) => ({
-      frete: acc.frete + curr.totalFrete,
-      custos: acc.custos + curr.totalCustos,
-      lucroOp: acc.lucroOp + curr.lucroOp
+      frete: acc.frete + Number(curr.totalFrete),
+      custos: acc.custos + Number(curr.totalCustos),
+      lucroOp: acc.lucroOp + Number(curr.lucroOp)
     }), { frete: 0, custos: 0, lucroOp: 0 });
 
     return {
@@ -152,27 +155,25 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
         </div>
       </Card>
 
-      {/* Cartões de Resumo Globais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-slate-900/50 border-slate-800 text-center">
           <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Faturamento Bruto</div>
-          <div className="text-xl font-black text-white">R$ {totals.frete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="text-xl font-black text-white">R$ {Number(totals.frete).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="bg-red-900/10 border-red-900/40 text-center">
           <div className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Custos Frota (Var)</div>
-          <div className="text-xl font-black text-white">R$ {totals.custos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="text-xl font-black text-white">R$ {Number(totals.custos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="bg-indigo-900/10 border-indigo-900/40 text-center">
           <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Despesas Fixas</div>
-          <div className="text-xl font-black text-white">R$ {totalDespesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="text-xl font-black text-white">R$ {Number(totalDespesasFixas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className={`${totals.lucroLiquido >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/20 border-red-900/50'} text-center`}>
           <div className={`text-[10px] font-black ${totals.lucroLiquido >= 0 ? 'text-emerald-500' : 'text-red-500'} uppercase tracking-widest mb-1`}>Lucro Real Consolidado</div>
-          <div className={`text-xl font-black ${totals.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {totals.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className={`text-xl font-black ${totals.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {Number(totals.lucroLiquido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>
 
-      {/* Painel Individual (Se selecionado) */}
       {selectedVehicleStats && (
         <Card className="border-l-8 border-l-blue-600 bg-blue-900/5 animate-slideDown overflow-hidden">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -193,16 +194,16 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400">Faturamento:</span>
-                      <span className="text-sm font-bold text-emerald-400">R$ {selectedVehicleStats.totalFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-sm font-bold text-emerald-400">R$ {Number(selectedVehicleStats.totalFrete).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400">Despesas Operacionais:</span>
-                      <span className="text-sm font-bold text-red-400">R$ {selectedVehicleStats.totalCustos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-sm font-bold text-red-400">R$ {Number(selectedVehicleStats.totalCustos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="pt-2 border-t border-slate-800 flex justify-between items-center">
                       <span className="text-xs font-black text-slate-200 uppercase">Lucro Operacional:</span>
                       <span className={`text-lg font-black ${selectedVehicleStats.lucroOp >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        R$ {selectedVehicleStats.lucroOp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {Number(selectedVehicleStats.lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -233,7 +234,7 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value: number) => `R$ ${Number(value).toLocaleString()}`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
@@ -323,22 +324,22 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
                       </span>
                     </td>
                     <td className="p-4 text-right text-xs font-bold text-slate-300">
-                      {s.totalFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.totalFrete).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-right text-xs font-bold text-red-400/80">
-                      {s.totalCustos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.totalCustos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-right text-[10px] text-slate-500">
-                      {s.gastoCombustivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.gastoCombustivel).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-right text-[10px] text-slate-500">
-                      {s.gastoManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.gastoManutencao).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-right text-[10px] text-slate-500">
-                      {s.gastoEquipe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.gastoEquipe).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className={`p-4 text-right text-xs font-black ${s.lucroOp >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
-                      {s.lucroOp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {Number(s.lucroOp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-center">
                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${s.margem >= 20 ? 'bg-emerald-500/10 text-emerald-500' : s.margem > 0 ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
@@ -351,12 +352,12 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
               <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-800">
                 <tr>
                   <td className="p-4 text-[10px] uppercase text-slate-500">LUCRO REAL</td>
-                  <td className="p-4 text-right text-sm text-blue-400">R$ {totals.frete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  <td className="p-4 text-right text-sm text-red-400">R$ {(totals.custos + totalDespesasFixas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="p-4 text-right text-sm text-blue-400">R$ {Number(totals.frete).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="p-4 text-right text-sm text-red-400">R$ {(Number(totals.custos) + Number(totalDespesasFixas)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td colSpan={3}></td>
-                  <td className={`p-4 text-right text-sm ${totals.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {totals.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className={`p-4 text-right text-sm ${totals.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {Number(totals.lucroLiquido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td className="p-4 text-center text-xs text-slate-400">
-                    {totals.frete > 0 ? ((totals.lucroLiquido / totals.frete) * 100).toFixed(1) : 0}%
+                    {Number(totals.frete) > 0 ? ((Number(totals.lucroLiquido) / Number(totals.frete)) * 100).toFixed(1) : 0}%
                   </td>
                 </tr>
               </tfoot>
