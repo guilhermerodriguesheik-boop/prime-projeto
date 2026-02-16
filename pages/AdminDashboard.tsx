@@ -33,12 +33,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     const totalFixed = fixedExpenses.reduce((sum, e) => sum + Number(e.valor || 0), 0);
     
-    // Soma rigorosa de todas as fontes de receita
-    const totalRevenue = [
-      ...dailyRoutes.map(r => Number(r.valorFrete || 0)), 
-      ...routes.map(r => Number(r.valorFrete || 0)),
-      ...agregadoFreights.map(r => Number(r.valorFrete || 0))
-    ].reduce((sum, val) => sum + val, 0);
+    // Soma rigorosa de todas as fontes de receita (Rotas do Dia + Saídas OC + Fretes Agregados)
+    const revenueFromDaily = dailyRoutes.reduce((sum, r) => sum + Number(r.valorFrete || 0), 0);
+    const revenueFromRoutes = routes.reduce((sum, r) => sum + Number(r.valorFrete || 0), 0);
+    const revenueFromAgregados = agregadoFreights.reduce((sum, r) => sum + Number(r.valorFrete || 0), 0);
+    
+    const totalRevenue = revenueFromDaily + revenueFromRoutes + revenueFromAgregados;
 
     const vehicleStatus = {
       rodando: vehicles.filter(v => v.status === 'rodando').length,
@@ -83,17 +83,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-emerald-900/10 border-emerald-900/40 relative overflow-hidden group">
           <div className="text-[10px] font-black text-emerald-500 uppercase mb-1 tracking-widest">Faturamento Bruto</div>
-          <div className="text-3xl font-black">R$ {stats.totalRevenue.toLocaleString()}</div>
+          <div className="text-3xl font-black">R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <ArrowUpRight className="absolute -bottom-2 -right-2 text-emerald-500/10 w-16 h-16 group-hover:scale-110 transition-transform" />
         </Card>
         <Card className="bg-blue-900/10 border-blue-900/40 relative overflow-hidden group">
           <div className="text-[10px] font-black text-blue-500 uppercase mb-1 tracking-widest">Combustível (Aprovado)</div>
-          <div className="text-3xl font-black">R$ {stats.totalFuelApproved.toLocaleString()}</div>
+          <div className="text-3xl font-black">R$ {stats.totalFuelApproved.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <TrendingUp className="absolute -bottom-2 -right-2 text-blue-500/10 w-16 h-16 group-hover:scale-110 transition-transform" />
         </Card>
         <Card className="bg-indigo-900/10 border-indigo-900/40 relative overflow-hidden group">
           <div className="text-[10px] font-black text-indigo-500 uppercase mb-1 tracking-widest">Custos Fixos Totais</div>
-          <div className="text-3xl font-black">R$ {stats.totalFixed.toLocaleString()}</div>
+          <div className="text-3xl font-black">R$ {stats.totalFixed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <ArrowDownRight className="absolute -bottom-2 -right-2 text-indigo-500/10 w-16 h-16 group-hover:scale-110 transition-transform" />
         </Card>
         <Card className="bg-slate-900/50 border-slate-800 relative overflow-hidden group">
@@ -169,23 +169,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               ))
             )}
-          </div>
-        </Card>
-
-        <Card className="lg:col-span-3">
-          <h3 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2">
-            <span className="w-2 h-5 bg-emerald-600 rounded-full"></span>
-            Status Global da Frota
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {chartData.map(item => (
-              <div key={item.name} className="bg-slate-950 p-6 rounded-3xl border border-slate-800 text-center relative overflow-hidden">
-                <div className="text-[10px] font-black text-slate-500 uppercase mb-2">{item.name}</div>
-                <div className="text-4xl font-black" style={{ color: item.color }}>{item.value}</div>
-                <div className="text-[9px] text-slate-700 font-bold uppercase mt-2">Veículos no status</div>
-                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: item.color }}></div>
-              </div>
-            ))}
           </div>
         </Card>
       </div>

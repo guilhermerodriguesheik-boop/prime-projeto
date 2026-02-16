@@ -144,18 +144,6 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
     return { allEntries, ...summary };
   }, [dailyRoutes, routes, agregadoFreights, fuelings, maintenances, tolls, fixedExpenses, startDate, endDate]);
 
-  const chartComparisonData = [
-    { name: 'Receitas', valor: filteredData.totalRevenue, color: '#10b981' },
-    { name: 'Despesas', valor: filteredData.totalExpense, color: '#ef4444' }
-  ];
-
-  const chartExpenseBreakdown = Object.entries(filteredData.expenseByCategory).map(([name, value]) => ({
-    name,
-    value: Number(value)
-  })).sort((a, b) => b.value - a.value);
-
-  const PIE_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#eab308'];
-
   const lucroLiquido = Number(filteredData.totalRevenue) - Number(filteredData.totalExpense);
 
   return (
@@ -175,13 +163,6 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
         </div>
       </div>
 
-      <Card className="border-blue-900/30 no-print">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Período Início" type="date" value={startDate} onChange={setStartDate} />
-          <Input label="Período Fim" type="date" value={endDate} onChange={setEndDate} />
-        </div>
-      </Card>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-slate-900/50 border-emerald-900/40 text-center">
           <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Faturamento Total</div>
@@ -194,78 +175,6 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
         <Card className={`${lucroLiquido >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/20 border-red-900/50'} text-center shadow-2xl`}>
           <div className={`text-[10px] font-black ${lucroLiquido >= 0 ? 'text-emerald-500' : 'text-red-500'} uppercase tracking-widest mb-1`}>Lucro Líquido Real</div>
           <div className={`text-4xl font-black ${lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-          <div className="text-[10px] font-bold text-slate-500 mt-2">
-            Margem Líquida: {Number(filteredData.totalRevenue) > 0 ? ((lucroLiquido / Number(filteredData.totalRevenue)) * 100).toFixed(2) : 0}%
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 no-print">
-        <Card className="h-[350px]">
-          <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-            <span className="w-2 h-4 bg-blue-600 rounded"></span>
-            Comparativo Global
-          </h3>
-          <ResponsiveContainer width="100%" height="80%">
-            <BarChart data={chartComparisonData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
-              <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} width={80} />
-              <Tooltip 
-                cursor={{fill: '#1e293b'}}
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                formatter={(value: number) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-              />
-              <Bar dataKey="valor" radius={[0, 4, 4, 0]} barSize={40}>
-                {chartComparisonData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card className="h-[350px]">
-          <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-            <span className="w-2 h-4 bg-indigo-600 rounded"></span>
-            Distribuição de Despesas
-          </h3>
-          <div className="flex flex-col md:flex-row h-full">
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartExpenseBreakdown}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {chartExpenseBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                    formatter={(value: number) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 flex flex-col justify-center gap-2 pl-4">
-              {chartExpenseBreakdown.map((item, index) => (
-                <div key={item.name} className="flex items-center justify-between text-[10px]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
-                    <span className="text-slate-400 font-bold uppercase">{item.name}</span>
-                  </div>
-                  <span className="text-slate-200 font-mono">
-                    {Number(filteredData.totalExpense) > 0 ? ((Number(item.value) / Number(filteredData.totalExpense)) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </Card>
       </div>
 
@@ -277,51 +186,24 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
                 <th className="p-4 border-b border-slate-800">Data</th>
                 <th className="p-4 border-b border-slate-800">Tipo</th>
                 <th className="p-4 border-b border-slate-800">Categoria</th>
-                <th className="p-4 border-b border-slate-800">Discriminação / Descrição</th>
+                <th className="p-4 border-b border-slate-800">Discriminação</th>
                 <th className="p-4 border-b border-slate-800 text-right">Valor (R$)</th>
               </tr>
             </thead>
             <tbody>
               {filteredData.allEntries.map((entry, idx) => (
                 <tr key={idx} className={`hover:bg-slate-900/50 transition-colors border-b border-slate-800/30 ${entry.type === 'Receita' ? 'bg-emerald-950/5' : 'bg-red-950/5'}`}>
-                  <td className="p-4 text-xs font-mono text-slate-400">
-                    {new Date(entry.date).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="p-4">
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${entry.type === 'Receita' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
-                      {entry.type}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
-                      {entry.category}
-                    </span>
-                  </td>
-                  <td className="p-4 text-xs font-medium text-slate-200">
-                    {entry.description}
-                  </td>
+                  <td className="p-4 text-xs font-mono text-slate-400">{new Date(entry.date).toLocaleDateString('pt-BR')}</td>
+                  <td className="p-4"><span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${entry.type === 'Receita' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{entry.type}</span></td>
+                  <td className="p-4"><span className="text-[10px] font-bold text-slate-500 uppercase">{entry.category}</span></td>
+                  <td className="p-4 text-xs text-slate-200">{entry.description}</td>
                   <td className={`p-4 text-right text-sm font-black ${entry.type === 'Receita' ? 'text-emerald-400' : 'text-red-400'}`}>
                     {entry.type === 'Receita' ? '+' : '-'} {Number(entry.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
               ))}
-              {filteredData.allEntries.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center text-slate-600 italic">
-                    Nenhuma movimentação financeira encontrada no período selecionado.
-                  </td>
-                </tr>
-              )}
             </tbody>
             <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-800">
-              <tr className="bg-slate-950">
-                <td colSpan={4} className="p-4 text-[10px] uppercase text-slate-500">TOTAL DE RECEITAS</td>
-                <td className="p-4 text-right text-emerald-400 font-black">R$ {Number(filteredData.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-              </tr>
-              <tr className="bg-slate-950">
-                <td colSpan={4} className="p-4 text-[10px] uppercase text-slate-500">TOTAL DE DESPESAS</td>
-                <td className="p-4 text-right text-red-400 font-black">R$ {Number(filteredData.totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-              </tr>
               <tr className="bg-slate-900 border-t border-slate-700">
                 <td colSpan={4} className="p-4 text-xs uppercase text-white font-black">LUCRO LÍQUIDO CONSOLIDADO</td>
                 <td className={`p-4 text-right text-xl font-black ${lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
