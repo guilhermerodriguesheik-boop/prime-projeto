@@ -33,6 +33,12 @@ export default async function handler(request: Request) {
       if (updates.nivelAgua !== undefined) await sql`UPDATE daily_routes SET nivel_agua = ${updates.nivelAgua} WHERE id = ${id}`;
       return json({ ok: true });
     }
+    if (request.method === 'DELETE') {
+      const { id } = await request.json();
+      if (!id) return json({ error: 'id required' }, 400);
+      await sql`DELETE FROM daily_routes WHERE id = ${id}`;
+      return json({ ok: true });
+    }
     return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
     return json({ error: e.message }, 500);

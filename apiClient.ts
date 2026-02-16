@@ -56,6 +56,8 @@ export const api = {
     request<any>('/fuelings', { method: 'POST', body: JSON.stringify(f) }),
   updateFueling: (id: string, updates: any) =>
     request<any>('/fuelings', { method: 'PUT', body: JSON.stringify({ id, ...updates }) }),
+  deleteFueling: (id: string) =>
+    request<any>('/fuelings', { method: 'DELETE', body: JSON.stringify({ id }) }),
 
   // Maintenances
   getMaintenances: () => request<any[]>('/maintenances'),
@@ -63,6 +65,8 @@ export const api = {
     request<any>('/maintenances', { method: 'POST', body: JSON.stringify(m) }),
   updateMaintenance: (id: string, updates: any) =>
     request<any>('/maintenances', { method: 'PUT', body: JSON.stringify({ id, ...updates }) }),
+  deleteMaintenance: (id: string) =>
+    request<any>('/maintenances', { method: 'DELETE', body: JSON.stringify({ id }) }),
 
   // Routes
   getRoutes: () => request<any[]>('/routes'),
@@ -70,6 +74,8 @@ export const api = {
     request<any>('/routes', { method: 'POST', body: JSON.stringify(r) }),
   updateRoute: (id: string, updates: any) =>
     request<any>('/routes', { method: 'PUT', body: JSON.stringify({ id, ...updates }) }),
+  deleteRoute: (id: string) =>
+    request<any>('/routes', { method: 'DELETE', body: JSON.stringify({ id }) }),
 
   // Daily Routes
   getDailyRoutes: () => request<any[]>('/daily-routes'),
@@ -77,6 +83,8 @@ export const api = {
     request<any>('/daily-routes', { method: 'POST', body: JSON.stringify(dr) }),
   updateDailyRoute: (id: string, updates: any) =>
     request<any>('/daily-routes', { method: 'PUT', body: JSON.stringify({ id, ...updates }) }),
+  deleteDailyRoute: (id: string) =>
+    request<any>('/daily-routes', { method: 'DELETE', body: JSON.stringify({ id }) }),
 
   // Fixed Expenses
   getFixedExpenses: () => request<any[]>('/fixed-expenses'),
@@ -89,6 +97,8 @@ export const api = {
   getAgregadoFreights: () => request<any[]>('/agregado-freights'),
   createAgregadoFreight: (af: any) =>
     request<any>('/agregado-freights', { method: 'POST', body: JSON.stringify(af) }),
+  deleteAgregadoFreight: (id: string) =>
+    request<any>('/agregado-freights', { method: 'DELETE', body: JSON.stringify({ id }) }),
 
   // Tolls
   getTolls: () => request<any[]>('/tolls'),

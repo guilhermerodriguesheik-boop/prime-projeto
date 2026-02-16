@@ -116,6 +116,13 @@ const App: React.FC = () => {
     apiCall(record).catch(err => console.error('[v0] saveRecord API error:', err));
   };
 
+  // Excluir registro: remove do estado local + envia DELETE para API
+  const deleteRecord = (setFn: any, id: string, apiCall: (id: string) => Promise<any>) => {
+    if (!window.confirm('Tem certeza que deseja excluir este lancamento? Esta acao nao pode ser desfeita.')) return;
+    setFn((prev: any[]) => prev.filter(i => i.id !== id));
+    apiCall(id).catch(err => console.error('[v0] deleteRecord API error:', err));
+  };
+
   // Atualizar registro existente: atualiza estado local + envia para API
   const updateRecord = (setFn: any, id: string, update: any, apiCall?: (id: string, u: any) => Promise<any>) => {
     setFn((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...update } : i));
@@ -249,7 +256,7 @@ const App: React.FC = () => {
       
       // Admin
       case 'admin-dashboard': return <AdminDashboard fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
-      case 'admin-pending': return <AdminPending fuelings={fuelings} maintenances={maintenances} dailyRoutes={dailyRoutes} routes={routes} vehicles={vehicles} users={users} currentUser={currentUser} onUpdateFueling={(id, up) => updateRecord(setFuelings, id, up, api.updateFueling)} onUpdateMaintenance={(id, up) => updateRecord(setMaintenances, id, up, api.updateMaintenance)} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up, api.updateDailyRoute)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up, api.updateRoute)} onBack={() => navigate('operation')} />;
+      case 'admin-pending': return <AdminPending fuelings={fuelings} maintenances={maintenances} dailyRoutes={dailyRoutes} routes={routes} vehicles={vehicles} users={users} currentUser={currentUser} onUpdateFueling={(id, up) => updateRecord(setFuelings, id, up, api.updateFueling)} onUpdateMaintenance={(id, up) => updateRecord(setMaintenances, id, up, api.updateMaintenance)} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up, api.updateDailyRoute)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up, api.updateRoute)} onDeleteFueling={(id) => deleteRecord(setFuelings, id, api.deleteFueling)} onDeleteMaintenance={(id) => deleteRecord(setMaintenances, id, api.deleteMaintenance)} onDeleteDailyRoute={(id) => deleteRecord(setDailyRoutes, id, api.deleteDailyRoute)} onDeleteRoute={(id) => deleteRecord(setRoutes, id, api.deleteRoute)} onBack={() => navigate('operation')} />;
       case 'user-mgmt': return <UserManagement users={users} onSaveUser={onSaveUser} onBack={() => navigate('operation')} />;
       case 'vehicle-mgmt': return <VehicleManagement vehicles={vehicles} onSaveVehicle={onSaveVehicle} onBack={() => navigate('operation')} />;
       case 'admin-customers': return <AdminCustomerManagement customers={customers} setCustomers={syncCustomers} onBack={() => navigate('operation')} />;
@@ -265,7 +272,7 @@ const App: React.FC = () => {
       case 'admin-checklists': return <AdminChecklistReport dailyRoutes={dailyRoutes} users={users} vehicles={vehicles} onBack={() => navigate('operation')} />;
       case 'admin-consolidated-finance': return <AdminConsolidatedFinancialReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} tolls={tolls} agregadoFreights={agregadoFreights} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} />;
       case 'admin-vehicle-report': return <AdminVehicleReport fuelings={fuelings} maintenances={maintenances} vehicles={vehicles} dailyRoutes={dailyRoutes} routes={routes} tolls={tolls} fixedExpenses={fixedExpenses} onBack={() => navigate('operation')} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up, api.updateDailyRoute)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up, api.updateRoute)} />;
-      case 'admin-activity-report': return <AdminActivityReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up, api.updateDailyRoute)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up, api.updateRoute)} onUpdateFueling={(id, up) => updateRecord(setFuelings, id, up, api.updateFueling)} onUpdateMaintenance={(id, up) => updateRecord(setMaintenances, id, up, api.updateMaintenance)} onBack={() => navigate('operation')} />;
+      case 'admin-activity-report': return <AdminActivityReport dailyRoutes={dailyRoutes} routes={routes} fuelings={fuelings} maintenances={maintenances} users={users} onUpdateDailyRoute={(id, up) => updateRecord(setDailyRoutes, id, up, api.updateDailyRoute)} onUpdateRoute={(id, up) => updateRecord(setRoutes, id, up, api.updateRoute)} onUpdateFueling={(id, up) => updateRecord(setFuelings, id, up, api.updateFueling)} onUpdateMaintenance={(id, up) => updateRecord(setMaintenances, id, up, api.updateMaintenance)} onDeleteFueling={(id) => deleteRecord(setFuelings, id, api.deleteFueling)} onDeleteMaintenance={(id) => deleteRecord(setMaintenances, id, api.deleteMaintenance)} onDeleteDailyRoute={(id) => deleteRecord(setDailyRoutes, id, api.deleteDailyRoute)} onDeleteRoute={(id) => deleteRecord(setRoutes, id, api.deleteRoute)} onBack={() => navigate('operation')} />;
 
       default: return <OperationHome user={currentUser} session={session} onNavigate={navigate} onLogout={handleLogout} />;
     }

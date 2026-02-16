@@ -15,6 +15,12 @@ export default async function handler(request: Request) {
       await sql`INSERT INTO agregado_freights (id, agregado_id, nome_agregado, placa, valor_frete, valor_agregado, oc, data, created_at) VALUES (${b.id}, ${b.agregadoId}, ${b.nomeAgregado}, ${b.placa}, ${b.valorFrete}, ${b.valorAgregado}, ${b.oc || null}, ${b.data}, ${b.createdAt || new Date().toISOString()})`;
       return json({ ok: true });
     }
+    if (request.method === 'DELETE') {
+      const { id } = await request.json();
+      if (!id) return json({ error: 'id required' }, 400);
+      await sql`DELETE FROM agregado_freights WHERE id = ${id}`;
+      return json({ ok: true });
+    }
     return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
     return json({ error: e.message }, 500);

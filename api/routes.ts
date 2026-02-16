@@ -30,6 +30,12 @@ export default async function handler(request: Request) {
       if (updates.ajudanteNome !== undefined) await sql`UPDATE routes SET ajudante_nome = ${updates.ajudanteNome} WHERE id = ${id}`;
       return json({ ok: true });
     }
+    if (request.method === 'DELETE') {
+      const { id } = await request.json();
+      if (!id) return json({ error: 'id required' }, 400);
+      await sql`DELETE FROM routes WHERE id = ${id}`;
+      return json({ ok: true });
+    }
     return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
     return json({ error: e.message }, 500);

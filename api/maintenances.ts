@@ -29,6 +29,12 @@ export default async function handler(request: Request) {
       if (updates.observacaoAdmin !== undefined) await sql`UPDATE maintenances SET observacao_admin = ${updates.observacaoAdmin} WHERE id = ${id}`;
       return json({ ok: true });
     }
+    if (request.method === 'DELETE') {
+      const { id } = await request.json();
+      if (!id) return json({ error: 'id required' }, 400);
+      await sql`DELETE FROM maintenances WHERE id = ${id}`;
+      return json({ ok: true });
+    }
     return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
     return json({ error: e.message }, 500);

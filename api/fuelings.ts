@@ -24,6 +24,12 @@ export default async function handler(request: Request) {
       if (updates.approvedAt !== undefined) await sql`UPDATE fuelings SET approved_at = ${updates.approvedAt} WHERE id = ${id}`;
       return json({ ok: true });
     }
+    if (request.method === 'DELETE') {
+      const { id } = await request.json();
+      if (!id) return json({ error: 'id required' }, 400);
+      await sql`DELETE FROM fuelings WHERE id = ${id}`;
+      return json({ ok: true });
+    }
     return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
     return json({ error: e.message }, 500);

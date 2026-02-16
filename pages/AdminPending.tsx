@@ -15,6 +15,10 @@ interface AdminPendingProps {
   onUpdateMaintenance: (id: string, update: Partial<MaintenanceRequest>) => void;
   onUpdateDailyRoute: (id: string, update: Partial<DailyRoute>) => void;
   onUpdateRoute: (id: string, update: Partial<RouteDeparture>) => void;
+  onDeleteFueling: (id: string) => void;
+  onDeleteMaintenance: (id: string) => void;
+  onDeleteDailyRoute: (id: string) => void;
+  onDeleteRoute: (id: string) => void;
   onBack: () => void;
 }
 
@@ -30,6 +34,10 @@ const AdminPending: React.FC<AdminPendingProps> = ({
   onUpdateMaintenance,
   onUpdateDailyRoute,
   onUpdateRoute,
+  onDeleteFueling,
+  onDeleteMaintenance,
+  onDeleteDailyRoute,
+  onDeleteRoute,
   onBack 
 }) => {
   const [tab, setTab] = useState<'fuel' | 'maintenance' | 'financial' | 'alerts' | 'history'>('fuel');
