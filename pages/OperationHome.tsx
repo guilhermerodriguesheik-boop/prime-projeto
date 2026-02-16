@@ -4,7 +4,7 @@ import { User, UserSession, UserRole, Fueling, MaintenanceRequest, DailyRoute, R
 import { BigButton, Card } from '../components/UI';
 import { 
   Route, 
-  FuelPump, 
+  Fuel, 
   Wrench, 
   ClipboardList, 
   Link as LinkIcon, 
@@ -140,7 +140,7 @@ const OperationHome: React.FC<OperationHomeProps> = ({
             <>
               <SectionHeader title="Minha Operação" />
               <BigButton onClick={() => onNavigate('daily-route')} icon={<Route size={32} />} variant="primary">Rota do Dia</BigButton>
-              <BigButton onClick={() => onNavigate('fueling')} icon={<FuelPump size={32} />} variant="primary">Abastecer</BigButton>
+              <BigButton onClick={() => onNavigate('fueling')} icon={<Fuel size={32} />} variant="primary">Abastecer</BigButton>
               <BigButton onClick={() => onNavigate('maintenance')} icon={<Wrench size={32} />} variant="secondary">Manutenção</BigButton>
               <SectionHeader title="Histórico" />
               <BigButton onClick={() => onNavigate('my-requests')} icon={<ClipboardList size={32} />} variant="secondary">Solicitações</BigButton>
