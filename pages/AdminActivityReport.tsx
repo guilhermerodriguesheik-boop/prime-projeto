@@ -51,7 +51,6 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
 
     let activities: any[] = [];
 
-    // 1. Rota do Dia
     const vDaily = dailyRoutes.filter(dr => 
       (dr.motoristaId === selectedUserId || dr.ajudanteId === selectedUserId) &&
       new Date(dr.createdAt) >= start &&
@@ -64,16 +63,15 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
       cliente: dr.clienteNome || 'N/A',
       destino: dr.destino,
       oc: dr.oc,
-      valorFrete: dr.valorFrete || 0,
-      valorMotorista: dr.valorMotorista || 0,
-      valorAjudante: dr.valorAjudante || 0,
+      valorFrete: Number(dr.valorFrete || 0),
+      valorMotorista: Number(dr.valorMotorista || 0),
+      valorAjudante: Number(dr.valorAjudante || 0),
       categoria: 'operacional',
       sourceType: 'daily',
       isAjudante: dr.ajudanteId === selectedUserId,
       adminAuditId: dr.adminFinanceiroId
     }));
 
-    // 2. Saídas/OC
     const vRoutes = routes.filter(r => 
       (r.ajudanteId === selectedUserId || r.motoristaId === selectedUserId) &&
       new Date(r.createdAt) >= start &&
@@ -86,16 +84,15 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
       cliente: r.clienteNome || 'N/A',
       destino: r.destino,
       oc: r.oc,
-      valorFrete: r.valorFrete || 0,
-      valorMotorista: r.valorMotorista || 0,
-      valorAjudante: r.valorAjudante || 0,
+      valorFrete: Number(r.valorFrete || 0),
+      valorMotorista: Number(r.valorMotorista || 0),
+      valorAjudante: Number(r.valorAjudante || 0),
       categoria: 'operacional',
       sourceType: 'route',
       isAjudante: r.ajudanteId === selectedUserId,
       adminAuditId: r.adminFinanceiroId
     }));
 
-    // 3. Abastecimentos
     const vFuelings = fuelings.filter(f => 
       f.motoristaId === selectedUserId &&
       new Date(f.createdAt) >= start &&
@@ -108,13 +105,12 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
       cliente: 'Posto Conveniado',
       destino: 'N/A',
       oc: `Nota: ${f.id.slice(0,8)}`,
-      valor: f.valor || 0,
+      valor: Number(f.valor || 0),
       categoria: 'financeiro',
       sourceType: 'fuel',
       adminAuditId: f.adminAprovadorId
     }));
 
-    // 4. Manutenções
     const vMaintenances = maintenances.filter(m => 
       m.motoristaId === selectedUserId &&
       new Date(m.createdAt) >= start &&
@@ -127,24 +123,24 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
       cliente: 'Solicitação Oficina',
       destino: m.descricao,
       oc: 'N/A',
-      valor: m.valor || 0,
+      valor: Number(m.valor || 0),
       categoria: 'financeiro',
       sourceType: 'maintenance',
       adminAuditId: m.adminResponsavelId
     }));
 
     activities = [...vDaily, ...vRoutes, ...vFuelings, ...vMaintenances];
-    return activities.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    return activities.sort((a, b) => new Date(b.data).getTime() - new Date(a.date).getTime());
   }, [selectedUserId, startDate, endDate, dailyRoutes, routes, fuelings, maintenances]);
 
   const stats = useMemo(() => {
     const uniqueDates = new Set(filteredReport.map(a => new Date(a.data).toLocaleDateString()));
-    const totalFrete = filteredReport.reduce((sum, item) => sum + (item.valorFrete || 0), 0);
+    const totalFrete = filteredReport.reduce((sum, item) => sum + Number(item.valorFrete || 0), 0);
     const totalGanhos = filteredReport.reduce((sum, item) => {
       if (item.sourceType === 'daily' || item.sourceType === 'route') {
-        return sum + (item.isAjudante ? item.valorAjudante : item.valorMotorista);
+        return sum + Number(item.isAjudante ? (item.valorAjudante || 0) : (item.valorMotorista || 0));
       }
-      return sum + (item.valor || 0);
+      return sum + Number(item.valor || 0);
     }, 0);
     
     return {
@@ -227,7 +223,7 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
               <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Total Ganho (Líquido)</div>
               <div className="text-2xl font-black text-emerald-400">R$ {stats.totalGanhos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
             </div>
-            <div className="bg-blue-600/10 border border-blue-600/20 p-6 rounded-2xl text-center card-report">
+            <div className="bg-blue-600/10 border-blue-600/20 p-6 rounded-2xl text-center card-report">
               <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Dias de Operação</div>
               <div className="text-2xl font-black text-white">{stats.workedDays}</div>
             </div>
@@ -262,45 +258,13 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
                       <div className="text-xs font-bold text-slate-200">{activity.cliente}</div>
                       <div className="text-[10px] text-slate-500 truncate max-w-[150px]">{activity.destino}</div>
                     </td>
-                    <td className="p-4 text-right">
-                      {editingId === activity.id && editingField === 'frete' ? (
-                        <input 
-                          type="number" autoFocus value={editValue} 
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => { if(e.key === 'Enter') handleSaveEdit(activity); if(e.key === 'Escape') setEditingId(null); }}
-                          className="w-20 bg-slate-950 border border-blue-500 rounded p-1 text-right text-xs"
-                        />
-                      ) : (
-                        <button 
-                          onClick={() => handleStartEdit(activity.id, 'frete', activity.valorFrete || 0)}
-                          className="text-xs font-bold text-slate-500 hover:text-slate-300"
-                        >
-                          {(activity.valorFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </button>
-                      )}
+                    <td className="p-4 text-right text-xs font-bold text-slate-500">
+                      {(activity.valorFrete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-right">
-                      {editingId === activity.id && (editingField === 'motorista' || editingField === 'ajudante' || editingField === 'valor') ? (
-                        <input 
-                          type="number" autoFocus value={editValue} 
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => { if(e.key === 'Enter') handleSaveEdit(activity); if(e.key === 'Escape') setEditingId(null); }}
-                          className="w-20 bg-slate-950 border border-blue-500 rounded p-1 text-right text-xs"
-                        />
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            const field = activity.sourceType === 'daily' || activity.sourceType === 'route' 
-                              ? (activity.isAjudante ? 'ajudante' : 'motorista')
-                              : 'valor';
-                            const val = activity.isAjudante ? activity.valorAjudante : (activity.valorMotorista || activity.valor);
-                            handleStartEdit(activity.id, field, val || 0);
-                          }}
-                          className="text-sm font-black text-emerald-500"
-                        >
+                        <span className="text-sm font-black text-emerald-500">
                           {(activity.isAjudante ? activity.valorAjudante : (activity.valorMotorista || activity.valor || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </button>
-                      )}
+                        </span>
                     </td>
                     <td className="p-4 text-center">
                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter">

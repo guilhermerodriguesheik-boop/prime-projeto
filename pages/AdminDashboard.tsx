@@ -33,6 +33,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     const totalFixed = fixedExpenses.reduce((sum, e) => sum + Number(e.valor || 0), 0);
     
+    // Soma rigorosa de todas as fontes de receita
     const totalRevenue = [
       ...dailyRoutes.map(r => Number(r.valorFrete || 0)), 
       ...routes.map(r => Number(r.valorFrete || 0)),
