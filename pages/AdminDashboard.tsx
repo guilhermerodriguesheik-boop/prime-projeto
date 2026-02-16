@@ -27,8 +27,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBack 
 }) => {
   const stats = useMemo(() => {
-    // Função auxiliar para garantir que o valor seja um número real
-    const safeNum = (val: any) => {
+    // Função auxiliar infalível para conversão numérica
+    const safeNum = (val: any): number => {
       const n = Number(val);
       return isNaN(n) ? 0 : n;
     };
@@ -39,12 +39,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     const totalFixed = fixedExpenses.reduce((sum, e) => sum + safeNum(e.valor), 0);
     
-    // Soma de todas as fontes de faturamento
+    // Soma rigorosa de todas as frentes de receita
     const revDaily = dailyRoutes.reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
     const revRoutes = routes.reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
     const revAgregados = agregadoFreights.reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
     
-    const totalRevenue = revDaily + revRoutes + revAgregados;
+    const totalRevenue = safeNum(revDaily) + safeNum(revRoutes) + safeNum(revAgregados);
 
     const vehicleStatus = {
       rodando: vehicles.filter(v => v.status === 'rodando').length,
@@ -56,10 +56,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [fuelings, vehicles, fixedExpenses, dailyRoutes, routes, agregadoFreights]);
 
   const financialMix = [
-    { name: 'Receita Total', value: stats.totalRevenue, color: '#10b981' },
-    { name: 'Combustível', value: stats.totalFuelApproved, color: '#3b82f6' },
-    { name: 'Custos Fixos', value: stats.totalFixed, color: '#6366f1' },
+    { name: 'Receita Operacional', value: stats.totalRevenue, color: '#10b981' },
+    { name: 'Custo Combustível', value: stats.totalFuelApproved, color: '#3b82f6' },
+    { name: 'Custos Administrativos', value: stats.totalFixed, color: '#6366f1' },
   ];
+
+  const totalCosts = stats.totalFuelApproved + stats.totalFixed;
+  const netResult = stats.totalRevenue - totalCosts;
 
   return (
     <div className="space-y-8 animate-fadeIn max-w-7xl mx-auto">
@@ -78,17 +81,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <ArrowUpRight className="absolute -bottom-2 -right-2 text-emerald-500/10 w-16 h-16" />
         </Card>
         <Card className="bg-blue-900/10 border-blue-900/40 relative overflow-hidden group">
-          <div className="text-[10px] font-black text-blue-500 uppercase mb-1 tracking-widest">Combustível</div>
+          <div className="text-[10px] font-black text-blue-500 uppercase mb-1 tracking-widest">Combustível (Aprovado)</div>
           <div className="text-3xl font-black">R$ {stats.totalFuelApproved.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <TrendingUp className="absolute -bottom-2 -right-2 text-blue-500/10 w-16 h-16" />
         </Card>
         <Card className="bg-indigo-900/10 border-indigo-900/40 relative overflow-hidden group">
-          <div className="text-[10px] font-black text-indigo-500 uppercase mb-1 tracking-widest">Custos Fixos</div>
+          <div className="text-[10px] font-black text-indigo-500 uppercase mb-1 tracking-widest">Custos Fixos Totais</div>
           <div className="text-3xl font-black">R$ {stats.totalFixed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           <ArrowDownRight className="absolute -bottom-2 -right-2 text-indigo-500/10 w-16 h-16" />
         </Card>
         <Card className="bg-slate-900/50 border-slate-800 relative overflow-hidden group">
-          <div className="text-[10px] font-black text-slate-500 uppercase mb-1 tracking-widest">Frota Ativa</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase mb-1 tracking-widest">Frota Prime</div>
           <div className="text-3xl font-black">{vehicles.length} <span className="text-xs opacity-40 uppercase">unid</span></div>
           <Activity className="absolute -bottom-2 -right-2 text-slate-500/10 w-16 h-16" />
         </Card>
@@ -96,7 +99,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-2">
-          <h3 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2">Fluxo Financeiro</h3>
+          <h3 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2">Distribuição Financeira</h3>
           <div className="h-80 w-full flex flex-col md:flex-row">
             <div className="flex-1">
               <ResponsiveContainer width="100%" height="100%">
@@ -116,9 +119,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               ))}
               <div className="mt-4 p-4 bg-slate-950 rounded-2xl border border-slate-800 text-center">
-                <div className="text-[9px] font-black text-slate-500 uppercase">Sobras Operacionais</div>
-                <div className={`text-xl font-black ${stats.totalRevenue - (stats.totalFuelApproved + stats.totalFixed) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  R$ {(stats.totalRevenue - (stats.totalFuelApproved + stats.totalFixed)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div className="text-[9px] font-black text-slate-500 uppercase">Margem Operacional</div>
+                <div className={`text-xl font-black ${netResult >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  R$ {netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>

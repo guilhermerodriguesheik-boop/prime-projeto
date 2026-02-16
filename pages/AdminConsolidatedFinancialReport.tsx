@@ -20,8 +20,12 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const filteredData = useMemo(() => {
-    const safeNum = (v: any) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+  const summary = useMemo(() => {
+    const safeNum = (v: any) => {
+      const n = Number(v);
+      return isNaN(n) ? 0 : n;
+    };
+
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
     if (end) end.setHours(23, 59, 59, 999);
@@ -32,50 +36,58 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
       return date >= start && date <= end;
     };
 
-    const revenues = [
-      ...dailyRoutes.filter(r => filterDate(r.createdAt)).map(r => ({ type: 'Receita', cat: 'Rota', val: safeNum(r.valorFrete), desc: r.oc })),
-      ...routes.filter(r => filterDate(r.createdAt)).map(r => ({ type: 'Receita', cat: 'OC', val: safeNum(r.valorFrete), desc: r.oc })),
-      ...agregadoFreights.filter(r => filterDate(r.data)).map(r => ({ type: 'Receita', cat: 'Agregado', val: safeNum(r.valorFrete), desc: r.oc }))
-    ];
+    // Receitas
+    const revRoutes = routes.filter(r => filterDate(r.createdAt)).reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
+    const revDaily = dailyRoutes.filter(r => filterDate(r.createdAt)).reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
+    const revAgregados = agregadoFreights.filter(r => filterDate(r.data)).reduce((sum, r) => sum + safeNum(r.valorFrete), 0);
+    const totalRevenue = revRoutes + revDaily + revAgregados;
 
-    const expenses = [
-      ...dailyRoutes.filter(r => filterDate(r.createdAt)).map(r => ({ type: 'Despesa', cat: 'Equipe', val: safeNum(r.valorMotorista) + safeNum(r.valorAjudante), desc: 'Pagto Equipe' })),
-      ...routes.filter(r => filterDate(r.createdAt)).map(r => ({ type: 'Despesa', cat: 'Equipe', val: safeNum(r.valorMotorista) + safeNum(r.valorAjudante), desc: 'Pagto Equipe' })),
-      ...agregadoFreights.filter(r => filterDate(r.data)).map(r => ({ type: 'Despesa', cat: 'Agregado', val: safeNum(r.valorAgregado), desc: 'Pagto Agregado' })),
-      ...fuelings.filter(f => f.status === FuelingStatus.APROVADO && filterDate(f.createdAt)).map(f => ({ type: 'Despesa', cat: 'Combustível', val: safeNum(f.valor), desc: f.placa })),
-      ...maintenances.filter(m => m.status === MaintenanceStatus.FEITA && filterDate(m.createdAt)).map(m => ({ type: 'Despesa', cat: 'Manutenção', val: safeNum(m.valor), desc: m.placa })),
-      ...tolls.filter(t => filterDate(t.data)).map(t => ({ type: 'Despesa', cat: 'Pedágio', val: safeNum(t.valor), desc: t.placa })),
-      ...fixedExpenses.filter(e => filterDate(e.createdAt)).map(e => ({ type: 'Despesa', cat: 'Fixo', val: safeNum(e.valor), desc: e.descricao }))
-    ];
+    // Despesas Operacionais (Variáveis)
+    const expFuel = fuelings.filter(f => f.status === FuelingStatus.APROVADO && filterDate(f.createdAt)).reduce((sum, f) => sum + safeNum(f.valor), 0);
+    const expMaint = maintenances.filter(m => m.status === MaintenanceStatus.FEITA && filterDate(m.createdAt)).reduce((sum, m) => sum + safeNum(m.valor), 0);
+    const expTolls = tolls.filter(t => filterDate(t.data)).reduce((sum, t) => sum + safeNum(t.valor), 0);
+    
+    // Despesas de Equipe
+    const expTeamDaily = dailyRoutes.filter(r => filterDate(r.createdAt)).reduce((sum, r) => sum + safeNum(r.valorMotorista) + safeNum(r.valorAjudante), 0);
+    const expTeamRoutes = routes.filter(r => filterDate(r.createdAt)).reduce((sum, r) => sum + safeNum(r.valorMotorista) + safeNum(r.valorAjudante), 0);
+    const expAgregadoPai = agregadoFreights.filter(r => filterDate(r.data)).reduce((sum, r) => sum + safeNum(r.valorAgregado), 0);
+    
+    // Despesas Fixas
+    const expFixed = fixedExpenses.filter(e => filterDate(e.createdAt)).reduce((sum, e) => sum + safeNum(e.valor), 0);
 
-    return [...revenues, ...expenses].reduce((acc, curr) => {
-      if (curr.type === 'Receita') acc.totalRev += curr.val;
-      else acc.totalExp += curr.val;
-      return acc;
-    }, { totalRev: 0, totalExp: 0 });
+    const totalExpense = expFuel + expMaint + expTolls + expTeamDaily + expTeamRoutes + expAgregadoPai + expFixed;
+
+    return { totalRevenue, totalExpense };
   }, [dailyRoutes, routes, fuelings, maintenances, tolls, agregadoFreights, fixedExpenses, startDate, endDate]);
 
-  const profit = filteredData.totalRev - filteredData.totalExp;
+  const profit = summary.totalRevenue - summary.totalExpense;
 
   return (
     <div className="space-y-8 animate-fadeIn">
       <div className="flex items-center justify-between no-print">
-        <h2 className="text-3xl font-bold">Relatório Consolidado</h2>
-        <button onClick={onBack} className="bg-slate-800 px-4 py-2 rounded-xl font-bold">Voltar</button>
+        <h2 className="text-3xl font-bold tracking-tight">Consolidado Financeiro</h2>
+        <button onClick={onBack} className="bg-slate-800 px-4 py-2 rounded-xl font-bold border border-slate-700">Voltar</button>
       </div>
 
+      <Card className="no-print">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label="Data Inicial" type="date" value={startDate} onChange={setStartDate} />
+          <Input label="Data Final" type="date" value={endDate} onChange={setEndDate} />
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="text-center">
-          <div className="text-[10px] font-black text-emerald-500 uppercase mb-1">Faturamento Total</div>
-          <div className="text-2xl font-black text-emerald-400">R$ {filteredData.totalRev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card className="text-center bg-emerald-900/10 border-emerald-900/40">
+          <div className="text-[10px] font-black text-emerald-500 uppercase mb-1">Entradas (Receitas)</div>
+          <div className="text-3xl font-black text-emerald-400">R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className="text-center">
-          <div className="text-[10px] font-black text-red-500 uppercase mb-1">Despesas Gerais</div>
-          <div className="text-2xl font-black text-red-400">R$ {filteredData.totalExp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card className="text-center bg-red-900/10 border-red-900/40">
+          <div className="text-[10px] font-black text-red-500 uppercase mb-1">Saídas (Despesas)</div>
+          <div className="text-3xl font-black text-red-400">R$ {summary.totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className={`text-center ${profit >= 0 ? 'border-emerald-500' : 'border-red-500'}`}>
+        <Card className={`text-center shadow-2xl ${profit >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-red-500/10 border-red-500/40'}`}>
           <div className="text-[10px] font-black uppercase mb-1">Lucro Líquido Real</div>
-          <div className={`text-3xl font-black ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className={`text-4xl font-black ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>
     </div>
