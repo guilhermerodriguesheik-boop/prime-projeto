@@ -1,31 +1,27 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, toCamel, cors } from './_db';
+import { getDb, toCamel, json, corsOk } from './_db';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
+export const config = { runtime: 'edge' };
+
+export default async function handler(request: Request) {
+  if (request.method === 'OPTIONS') return corsOk();
   const sql = getDb();
-
   try {
-    if (req.method === 'GET') {
+    if (request.method === 'GET') {
       const rows = await sql`SELECT * FROM agregados ORDER BY nome`;
-      return res.json(rows.map(toCamel));
+      return json(rows.map(toCamel));
     }
-
-    if (req.method === 'POST') {
-      const { id, nome, placa, ativo } = req.body;
+    if (request.method === 'POST') {
+      const { id, nome, placa, ativo } = await request.json();
       const existing = await sql`SELECT id FROM agregados WHERE id = ${id}`;
       if (existing.length > 0) {
         await sql`UPDATE agregados SET nome=${nome}, placa=${placa}, ativo=${ativo} WHERE id=${id}`;
       } else {
         await sql`INSERT INTO agregados (id, nome, placa, ativo) VALUES (${id}, ${nome}, ${placa}, ${ativo})`;
       }
-      return res.json({ ok: true });
+      return json({ ok: true });
     }
-
-    // PUT to replace the entire list (used by AdminAgregadoManagement)
-    if (req.method === 'PUT') {
-      const items = req.body;
+    if (request.method === 'PUT') {
+      const items = await request.json();
       if (Array.isArray(items)) {
         for (const { id, nome, placa, ativo } of items) {
           const existing = await sql`SELECT id FROM agregados WHERE id = ${id}`;
@@ -36,12 +32,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
       }
-      return res.json({ ok: true });
+      return json({ ok: true });
     }
-
-    return res.status(405).json({ error: 'Method not allowed' });
+    return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
-    console.error('API /agregados error:', e);
-    return res.status(500).json({ error: e.message });
+    return json({ error: e.message }, 500);
   }
 }

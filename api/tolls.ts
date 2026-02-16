@@ -1,38 +1,32 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, toCamel, cors } from './_db';
+import { getDb, toCamel, json, corsOk } from './_db';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
+export const config = { runtime: 'edge' };
+
+export default async function handler(request: Request) {
+  if (request.method === 'OPTIONS') return corsOk();
   const sql = getDb();
-
   try {
-    if (req.method === 'GET') {
+    if (request.method === 'GET') {
       const rows = await sql`SELECT * FROM tolls ORDER BY created_at DESC`;
-      return res.json(rows.map(toCamel));
+      return json(rows.map(toCamel));
     }
-
-    if (req.method === 'POST') {
-      const b = req.body;
+    if (request.method === 'POST') {
+      const b = await request.json();
       await sql`INSERT INTO tolls (id, vehicle_id, placa, valor, data, created_at) VALUES (${b.id}, ${b.vehicleId}, ${b.placa}, ${b.valor}, ${b.data}, ${b.createdAt || new Date().toISOString()})`;
-      return res.json({ ok: true });
+      return json({ ok: true });
     }
-
-    // PUT to replace the entire list
-    if (req.method === 'PUT') {
-      const items = req.body;
+    if (request.method === 'PUT') {
+      const items = await request.json();
       if (Array.isArray(items)) {
         await sql`DELETE FROM tolls`;
         for (const b of items) {
           await sql`INSERT INTO tolls (id, vehicle_id, placa, valor, data, created_at) VALUES (${b.id}, ${b.vehicleId}, ${b.placa}, ${b.valor}, ${b.data}, ${b.createdAt || new Date().toISOString()})`;
         }
       }
-      return res.json({ ok: true });
+      return json({ ok: true });
     }
-
-    return res.status(405).json({ error: 'Method not allowed' });
+    return json({ error: 'Method not allowed' }, 405);
   } catch (e: any) {
-    console.error('API /tolls error:', e);
-    return res.status(500).json({ error: e.message });
+    return json({ error: e.message }, 500);
   }
 }
