@@ -76,43 +76,6 @@ const App: React.FC = () => {
     })();
   }, [loadAllData]);
 
-  // Polling: recarregar dados a cada 15 segundos para sincronizar entre aparelhos
-  useEffect(() => {
-    if (loading) return;
-    const interval = setInterval(async () => {
-      try {
-        const [f, m, r, dr, u, v, c, ag, af, fe, t] = await Promise.all([
-          api.getFuelings(),
-          api.getMaintenances(),
-          api.getRoutes(),
-          api.getDailyRoutes(),
-          api.getUsers(),
-          api.getVehicles(),
-          api.getCustomers(),
-          api.getAgregados(),
-          api.getAgregadoFreights(),
-          api.getFixedExpenses(),
-          api.getTolls(),
-        ]);
-        setFuelings(f);
-        setMaintenances(m);
-        setRoutes(r);
-        setDailyRoutes(dr);
-        setUsers(u);
-        setVehicles(v);
-        setCustomers(c);
-        setAgregados(ag);
-        setAgregadoFreights(af);
-        setFixedExpenses(fe);
-        setTolls(t);
-        setSyncStatus('ok');
-      } catch {
-        // Falha silenciosa no polling - nao muda status
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [loading]);
-
   // Restaurar sessao do usuario apos carregar dados
   useEffect(() => {
     if (loading || users.length === 0) return;
