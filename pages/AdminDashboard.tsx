@@ -27,7 +27,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBack 
 }) => {
   const stats = useMemo(() => {
-    // Função auxiliar infalível para conversão numérica
     const safeNum = (val: any): number => {
       const n = Number(val);
       return isNaN(n) ? 0 : n;
@@ -39,7 +38,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     const totalFixed = fixedExpenses.reduce((sum, e) => Number(sum) + safeNum(e.valor), 0);
     
-    // Soma rigorosa de todas as frentes de receita
     const revDaily = dailyRoutes.reduce((sum, r) => Number(sum) + safeNum(r.valorFrete), 0);
     const revRoutes = routes.reduce((sum, r) => Number(sum) + safeNum(r.valorFrete), 0);
     const revAgregados = agregadoFreights.reduce((sum, r) => Number(sum) + safeNum(r.valorFrete), 0);
@@ -123,7 +121,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               ))}
               <div className="mt-4 p-4 bg-slate-950 rounded-2xl border border-slate-800 text-center shadow-inner">
-                <div className="text-[9px] font-black text-slate-500 uppercase">Resultado Líquido</div>
+                <div className="text-[9px] font-black text-slate-500 uppercase">Resultado Líquido Consolidado</div>
                 <div className={`text-xl font-black ${netResult >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                   R$ {netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>

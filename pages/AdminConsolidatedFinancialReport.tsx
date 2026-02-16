@@ -21,7 +21,6 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
   const [endDate, setEndDate] = useState('');
 
   const summary = useMemo(() => {
-    // Helper para garantir soma numérica
     const safeNum = (v: any) => {
       const n = Number(v);
       return isNaN(n) ? 0 : n;
@@ -83,7 +82,7 @@ const AdminConsolidatedFinancialReport: React.FC<AdminConsolidatedFinancialRepor
           <div className="text-3xl font-black text-white">R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className="text-center bg-red-900/10 border-red-900/40">
-          <div className="text-[10px] font-black text-red-500 uppercase mb-1 tracking-widest">Saídas (Despesas)</div>
+          <div className="text-[10px] font-black text-red-500 uppercase mb-1 tracking-widest">Saídas (Despesas Gerais)</div>
           <div className="text-3xl font-black text-white">R$ {summary.totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className={`text-center shadow-2xl ${profit >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-red-500/10 border-red-500/40'}`}>

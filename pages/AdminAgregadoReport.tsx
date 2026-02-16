@@ -68,7 +68,7 @@ const AdminAgregadoReport: React.FC<AdminAgregadoReportProps> = ({ freights, onB
           <div className="text-2xl font-black text-red-400">R$ {totals.pago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
         <Card className={`text-center ${totals.saldo >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/10 border-red-900/40'}`}>
-          <div className="text-[10px] font-black uppercase mb-1 tracking-widest">Resultado Real</div>
+          <div className="text-[10px] font-black uppercase mb-1 tracking-widest">Saldo Real (Margem)</div>
           <div className={`text-2xl font-black ${totals.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {totals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>

@@ -2,7 +2,6 @@
 import React, { useState, useMemo } from 'react';
 import { Fueling, MaintenanceRequest, Vehicle, FuelingStatus, DailyRoute, RouteDeparture, MaintenanceStatus, Toll, FixedExpense } from '../types';
 import { Card, Badge, Input, Select } from '../components/UI';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, ComposedChart, Line } from 'recharts';
 
 interface AdminVehicleReportProps {
   fuelings: Fueling[];
@@ -60,16 +59,16 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
       const vRoutes = r.filter(route => route.vehicleId === v.id);
       const vTolls = t.filter(toll => toll.vehicleId === v.id);
       
-      const gastoCombustivel = vFuelings.reduce((sum, fuel) => sum + Number(fuel.valor || 0), 0);
-      const gastoManutencao = vMaintenances.reduce((sum, maint) => sum + Number(maint.valor || 0), 0);
-      const gastoPedagio = vTolls.reduce((sum, toll) => sum + Number(toll.valor || 0), 0);
+      const gastoCombustivel = vFuelings.reduce((sum, fuel) => Number(sum) + Number(fuel.valor || 0), 0);
+      const gastoManutencao = vMaintenances.reduce((sum, maint) => Number(sum) + Number(maint.valor || 0), 0);
+      const gastoPedagio = vTolls.reduce((sum, toll) => Number(sum) + Number(toll.valor || 0), 0);
       
       const gastoEquipe = [
         ...vDailyRoutes.map(op => Number(op.valorMotorista || 0) + Number(op.valorAjudante || 0)),
         ...vRoutes.map(op => Number(op.valorMotorista || 0) + Number(op.valorAjudante || 0))
-      ].reduce((sum, val) => sum + val, 0);
+      ].reduce((sum, val) => Number(sum) + Number(val || 0), 0);
       
-      const totalFrete = [...vDailyRoutes, ...vRoutes].reduce((sum, op) => sum + Number(op.valorFrete || 0), 0);
+      const totalFrete = [...vDailyRoutes, ...vRoutes].reduce((sum, op) => Number(sum) + Number(op.valorFrete || 0), 0);
       const totalCustos = gastoCombustivel + gastoManutencao + gastoPedagio + gastoEquipe;
       const lucroOp = totalFrete - totalCustos;
 
@@ -89,27 +88,26 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
     }).sort((a, b) => b.totalFrete - a.totalFrete);
   }, [vehicles, dateFilteredData]);
 
-  const totalDespesasFixas = useMemo(() => dateFilteredData.fe.reduce((sum, e) => sum + Number(e.valor || 0), 0), [dateFilteredData]);
+  const totalDespesasFixas = useMemo(() => dateFilteredData.fe.reduce((sum, e) => Number(sum) + Number(e.valor || 0), 0), [dateFilteredData]);
 
-  // CORREÇÃO: Garante acumulador numérico no fechamento de totais
   const totals = useMemo(() => {
     return vehicleStats.reduce((acc, curr) => ({
-      frete: acc.frete + Number(curr.totalFrete || 0),
-      custos: acc.custos + Number(curr.totalCustos || 0),
-      lucroOp: acc.lucroOp + Number(curr.lucroOp || 0)
+      frete: Number(acc.frete) + Number(curr.totalFrete || 0),
+      custos: Number(acc.custos) + Number(curr.totalCustos || 0),
+      lucroOp: Number(acc.lucroOp) + Number(curr.lucroOp || 0)
     }), { frete: 0, custos: 0, lucroOp: 0 });
   }, [vehicleStats]);
 
-  const lucroLiquido = totals.lucroOp - totalDespesasFixas;
+  const lucroLiquido = Number(totals.lucroOp) - Number(totalDespesasFixas);
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Relatório de Desempenho</h2>
-          <p className="text-slate-500 text-sm">Análise consolidada e individual da frota</p>
+          <h2 className="text-3xl font-black uppercase text-white tracking-tight">Desempenho da Frota</h2>
+          <p className="text-slate-500 text-sm">Análise matemática consolidada por unidade</p>
         </div>
-        <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold border border-slate-700 text-xs">Voltar</button>
+        <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-6 py-2 rounded-xl font-bold border border-slate-700 text-xs text-white">Voltar</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -44,40 +44,40 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
   }, [selectedUserId, startDate, endDate, dailyRoutes, routes]);
 
   const stats = useMemo(() => {
-    const totalFrete = filteredReport.reduce((sum, item) => sum + Number(item.valorFrete || 0), 0);
-    const totalGanhos = filteredReport.reduce((sum, item) => sum + Number(item.isAjudante ? (item.valorAjudante || 0) : (item.valorMotorista || 0)), 0);
+    const totalFrete = filteredReport.reduce((sum, item) => Number(sum) + Number(item.valorFrete || 0), 0);
+    const totalGanhos = filteredReport.reduce((sum, item) => Number(sum) + Number(item.isAjudante ? (item.valorAjudante || 0) : (item.valorMotorista || 0)), 0);
     
     return { workedDays: new Set(filteredReport.map(a => new Date(a.data).toLocaleDateString())).size, totalFrete, totalGanhos };
   }, [filteredReport]);
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn max-w-7xl mx-auto">
       <div className="flex items-center justify-between no-print">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Relatório de Atividade</h2>
-          <p className="text-slate-500 text-sm">Gestão Financeira por Colaborador</p>
+          <h2 className="text-3xl font-black uppercase text-white tracking-tight">Atividade do Colaborador</h2>
+          <p className="text-slate-500 text-sm">Gestão financeira e produtividade individual</p>
         </div>
-        <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold border border-slate-700 text-xs">Voltar</button>
+        <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-6 py-2 rounded-xl font-bold border border-slate-700 text-xs text-white">Voltar</button>
       </div>
 
       <Card className="border-blue-900/30 no-print">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select label="Usuário" value={selectedUserId} onChange={setSelectedUserId} options={users.filter(u => u.perfil !== UserRole.ADMIN).map(u => ({ label: u.nome, value: u.id }))} />
-          <Input label="Início" type="date" value={startDate} onChange={setStartDate} />
-          <Input label="Fim" type="date" value={endDate} onChange={setEndDate} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Select label="Selecionar Colaborador" value={selectedUserId} onChange={setSelectedUserId} options={users.filter(u => u.perfil !== UserRole.ADMIN).map(u => ({ label: u.nome, value: u.id }))} />
+          <Input label="Data Inicial" type="date" value={startDate} onChange={setStartDate} />
+          <Input label="Data Final" type="date" value={endDate} onChange={setEndDate} />
         </div>
       </Card>
 
       {selectedUserId && startDate && endDate && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-emerald-600/10 border border-emerald-600/20 p-6 rounded-2xl text-center">
-              <div className="text-[10px] font-black text-emerald-500 uppercase mb-1">Total Ganho (Líquido)</div>
-              <div className="text-2xl font-black text-emerald-400">R$ {stats.totalGanhos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              <div className="text-[10px] font-black text-emerald-500 uppercase mb-1 tracking-widest">Total Ganho (Líquido)</div>
+              <div className="text-3xl font-black text-emerald-400">R$ {stats.totalGanhos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
             </div>
             <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-slate-800">
-              <div className="text-[10px] font-black text-slate-500 uppercase mb-1">Dias de Operação</div>
-              <div className="text-2xl font-black text-white">{stats.workedDays}</div>
+              <div className="text-[10px] font-black text-slate-500 uppercase mb-1 tracking-widest">Dias de Operação</div>
+              <div className="text-3xl font-black text-white">{stats.workedDays}</div>
             </div>
           </div>
         </div>
