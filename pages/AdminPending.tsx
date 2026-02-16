@@ -251,9 +251,10 @@ const AdminPending: React.FC<AdminPendingProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-2 w-full md:w-auto">
+                  <div className="flex gap-2 w-full md:w-auto flex-wrap">
                     <button onClick={() => handleApproveFueling(f.id)} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-bold">Aprovar</button>
                     <button onClick={() => setRejectId(f.id)} className="flex-1 md:flex-none bg-red-900/40 text-red-400 border border-red-900 px-6 py-3 rounded-xl font-bold">Rejeitar</button>
+                    <button onClick={() => onDeleteFueling(f.id)} className="flex-1 md:flex-none bg-slate-800 hover:bg-red-900 text-slate-400 hover:text-red-300 px-4 py-3 rounded-xl font-bold text-xs border border-slate-700 hover:border-red-800 transition-all">Excluir</button>
                   </div>
                 )}
               </Card>
@@ -331,6 +332,12 @@ const AdminPending: React.FC<AdminPendingProps> = ({
                           Confirmar e Direcionar
                         </button>
                       )}
+                      <button 
+                        onClick={() => item.type === 'daily' ? onDeleteDailyRoute(item.id) : onDeleteRoute(item.id)}
+                        className="bg-slate-800 hover:bg-red-900 text-slate-400 hover:text-red-300 px-6 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest border border-slate-700 hover:border-red-800 transition-all"
+                      >
+                        Excluir
+                      </button>
                     </div>
                   )}
                 </div>
@@ -386,6 +393,7 @@ const AdminPending: React.FC<AdminPendingProps> = ({
                     {m.status !== MaintenanceStatus.PENDENTE && m.adminResponsavelId !== currentUser.id && (
                        <div className="text-[10px] text-slate-600 font-bold uppercase text-center border border-slate-800 p-2 rounded">Assumida por {getUserName(m.adminResponsavelId)}</div>
                     )}
+                    <button onClick={() => onDeleteMaintenance(m.id)} className="bg-slate-800 hover:bg-red-900 text-slate-400 hover:text-red-300 p-2 rounded-xl font-bold text-[10px] uppercase tracking-widest border border-slate-700 hover:border-red-800 transition-all">Excluir</button>
                   </div>
                 )}
               </Card>
@@ -434,12 +442,13 @@ const AdminPending: React.FC<AdminPendingProps> = ({
                   <th className="p-4 border-b border-slate-800">Descrição Item</th>
                   <th className="p-4 border-b border-slate-800">Status Final</th>
                   <th className="p-4 border-b border-slate-800">Autorizado Por</th>
+                  <th className="p-4 border-b border-slate-800">Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {auditHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-20 text-center text-slate-600 italic">Nenhum histórico de auditoria registrado.</td>
+                    <td colSpan={7} className="p-20 text-center text-slate-600 italic">Nenhum histórico de auditoria registrado.</td>
                   </tr>
                 ) : (
                   auditHistory.map((item) => (
@@ -469,6 +478,19 @@ const AdminPending: React.FC<AdminPendingProps> = ({
                             {getUserName(item.adminId)}
                           </span>
                         </div>
+                      </td>
+                      <td className="p-4">
+                        <button 
+                          onClick={() => {
+                            if (item.tipo === 'Abastecimento') onDeleteFueling(item.id);
+                            else if (item.tipo === 'Manutenção') onDeleteMaintenance(item.id);
+                            else if (item.tipo === 'Fin. Rota Dia') onDeleteDailyRoute(item.id);
+                            else if (item.tipo === 'Saída OC (Ajudante)') onDeleteRoute(item.id);
+                          }}
+                          className="bg-slate-800 hover:bg-red-900 text-slate-500 hover:text-red-300 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase border border-slate-700 hover:border-red-800 transition-all"
+                        >
+                          Excluir
+                        </button>
                       </td>
                     </tr>
                   ))

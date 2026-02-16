@@ -13,6 +13,10 @@ interface AdminActivityReportProps {
   onUpdateRoute: (id: string, update: Partial<RouteDeparture>) => void;
   onUpdateFueling: (id: string, update: Partial<Fueling>) => void;
   onUpdateMaintenance: (id: string, update: Partial<MaintenanceRequest>) => void;
+  onDeleteFueling?: (id: string) => void;
+  onDeleteMaintenance?: (id: string) => void;
+  onDeleteDailyRoute?: (id: string) => void;
+  onDeleteRoute?: (id: string) => void;
   onBack: () => void;
 }
 
@@ -26,6 +30,10 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
   onUpdateRoute,
   onUpdateFueling,
   onUpdateMaintenance,
+  onDeleteFueling,
+  onDeleteMaintenance,
+  onDeleteDailyRoute,
+  onDeleteRoute,
   onBack 
 }) => {
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -251,6 +259,7 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
                   <th className="p-4 text-right">Frete (Bruto)</th>
                   <th className="p-4 text-right">Ganho Colab.</th>
                   <th className="p-4 text-center">Audit</th>
+                  <th className="p-4 text-center no-print">Acao</th>
                 </tr>
               </thead>
               <tbody>
@@ -306,6 +315,19 @@ const AdminActivityReport: React.FC<AdminActivityReportProps> = ({
                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter">
                          {activity.adminAuditId ? getUserName(activity.adminAuditId) : 'N/A'}
                        </span>
+                    </td>
+                    <td className="p-4 text-center no-print">
+                      <button 
+                        onClick={() => {
+                          if (activity.sourceType === 'daily' && onDeleteDailyRoute) onDeleteDailyRoute(activity.id);
+                          else if (activity.sourceType === 'route' && onDeleteRoute) onDeleteRoute(activity.id);
+                          else if (activity.sourceType === 'fuel' && onDeleteFueling) onDeleteFueling(activity.id);
+                          else if (activity.sourceType === 'maintenance' && onDeleteMaintenance) onDeleteMaintenance(activity.id);
+                        }}
+                        className="bg-slate-800 hover:bg-red-900 text-slate-500 hover:text-red-300 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase border border-slate-700 hover:border-red-800 transition-all"
+                      >
+                        Excluir
+                      </button>
                     </td>
                   </tr>
                 ))}
