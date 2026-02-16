@@ -29,21 +29,24 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
 }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [viewMode, setViewMode] = useState<'visual' | 'table'>('visual');
-  const [selectedVehicleId, setSelectedVehicleId] = useState('');
 
   const dateFilteredData = useMemo(() => {
-    if (!startDate || !endDate) return { f: fuelings, m: maintenances, dr: dailyRoutes, r: routes, t: tolls, fe: fixedExpenses };
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    if (end) end.setHours(23, 59, 59, 999);
     
+    const filterByDate = (dateStr: string) => {
+      if (!start || !end) return true;
+      const d = new Date(dateStr);
+      return d >= start && d <= end;
+    };
+
     return {
-      f: fuelings.filter(x => new Date(x.createdAt) >= start && new Date(x.createdAt) <= end),
-      m: maintenances.filter(x => new Date(x.createdAt) >= start && new Date(x.createdAt) <= end),
-      dr: dailyRoutes.filter(x => new Date(x.createdAt) >= start && new Date(x.createdAt) <= end),
-      r: routes.filter(x => new Date(x.createdAt) >= start && new Date(x.createdAt) <= end),
-      t: tolls.filter(x => new Date(x.data) >= start && new Date(x.data) <= end),
+      f: fuelings.filter(x => filterByDate(x.createdAt)),
+      m: maintenances.filter(x => filterByDate(x.createdAt)),
+      dr: dailyRoutes.filter(x => filterByDate(x.createdAt)),
+      r: routes.filter(x => filterByDate(x.createdAt)),
+      t: tolls.filter(x => filterByDate(x.data)),
       fe: fixedExpenses.filter(x => x.dataCompetencia === startDate.slice(0, 7))
     };
   }, [startDate, endDate, fuelings, maintenances, dailyRoutes, routes, tolls, fixedExpenses]);
@@ -88,15 +91,16 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
 
   const totalDespesasFixas = useMemo(() => dateFilteredData.fe.reduce((sum, e) => sum + Number(e.valor || 0), 0), [dateFilteredData]);
 
+  // CORREÇÃO: Garante acumulador numérico no fechamento de totais
   const totals = useMemo(() => {
-    const sumOp = vehicleStats.reduce((acc, curr) => ({
-      frete: acc.frete + Number(curr.totalFrete),
-      custos: acc.custos + Number(curr.totalCustos),
-      lucroOp: acc.lucroOp + Number(curr.lucroOp)
+    return vehicleStats.reduce((acc, curr) => ({
+      frete: acc.frete + Number(curr.totalFrete || 0),
+      custos: acc.custos + Number(curr.totalCustos || 0),
+      lucroOp: acc.lucroOp + Number(curr.lucroOp || 0)
     }), { frete: 0, custos: 0, lucroOp: 0 });
+  }, [vehicleStats]);
 
-    return { ...sumOp, lucroLiquido: sumOp.lucroOp - totalDespesasFixas };
-  }, [vehicleStats, totalDespesasFixas]);
+  const lucroLiquido = totals.lucroOp - totalDespesasFixas;
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -105,9 +109,7 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
           <h2 className="text-3xl font-bold tracking-tight">Relatório de Desempenho</h2>
           <p className="text-slate-500 text-sm">Análise consolidada e individual da frota</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold border border-slate-700 text-xs">Voltar</button>
-        </div>
+        <button onClick={onBack} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold border border-slate-700 text-xs">Voltar</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -123,9 +125,9 @@ const AdminVehicleReport: React.FC<AdminVehicleReportProps> = ({
           <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Despesas Fixas</div>
           <div className="text-xl font-black text-white">R$ {totalDespesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
-        <Card className={`${totals.lucroLiquido >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/20 border-red-900/50'} text-center`}>
-          <div className={`text-[10px] font-black ${totals.lucroLiquido >= 0 ? 'text-emerald-500' : 'text-red-500'} uppercase tracking-widest mb-1`}>Lucro Real Consolidado</div>
-          <div className={`text-xl font-black ${totals.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {totals.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <Card className={`${lucroLiquido >= 0 ? 'bg-emerald-900/10 border-emerald-900/40' : 'bg-red-900/20 border-red-900/50'} text-center`}>
+          <div className={`text-[10px] font-black ${lucroLiquido >= 0 ? 'text-emerald-500' : 'text-red-500'} uppercase tracking-widest mb-1`}>Lucro Real Consolidado</div>
+          <div className={`text-xl font-black ${lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
         </Card>
       </div>
     </div>
