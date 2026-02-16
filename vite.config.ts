@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      external: [/^@vercel\/node/, /^@neondatabase/]
+    }
   },
   server: {
     port: 3000,
